@@ -5,7 +5,6 @@ on:
     - cron: '0 0 * * *' # Runs every day at midnight (UTC)
   workflow_dispatch:      # Allows manual trigger
 
-# Write permissions required for release creation
 permissions:
   contents: write
 
@@ -15,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
-      options: --privileged # Privileged mode required for ISO build
+      options: --privileged
     
     steps:
       - name: Checkout repository
@@ -23,44 +22,25 @@ jobs:
 
       - name: Install Build Tools
         run: |
-          # Update Arch Linux container and install archiso
           pacman -Syu --noconfirm
-          pacman -S --noconfirm archiso make git sed
+          pacman -S --noconfirm archiso make git
 
       - name: Configure ISO Profile
         run: |
-          # 1. Copy default releng profile (Base system)
+          # 1. Copy default releng profile
           cp -r /usr/share/archiso/configs/releng /tmp/archlive
           
-          # 2. Append package list
-          # Append required packages after default releng packages (base, linux, etc.)
-          cat <<EOF >> /tmp/archlive/packages.x86_64
-          
-          # --- Desktop Environment ---
-          plasma-meta
-          sddm
-          egl-wayland
-          
-          # --- Apps ---
-          konsole
-          dolphin
-          firefox
-          
-          # --- Audio & Bluetooth Backend ---
-          wireplumber
-          pipewire-alsa
-          pipewire-pulse
-          
-          # --- Fonts (Korean Support) ---
-          noto-fonts
-          noto-fonts-cjk
-          noto-fonts-emoji
-          ttf-liberation
-          EOF
+          # 2. Append Custom Packages from external file
+          # Read 'custom_packages.x86_64' from the repository and append to the ISO config
+          if [ -f "custom_packages.x86_64" ]; then
+            cat custom_packages.x86_64 >> /tmp/archlive/packages.x86_64
+            echo "Custom packages appended successfully."
+          else
+            echo "Error: custom_packages.x86_64 file not found!"
+            exit 1
+          fi
 
-          # 3. Enable services (Create symlinks)
-          # Configure services to start automatically on ISO boot
-          
+          # 3. System Configuration & Services
           AIROOTFS_DIR="/tmp/archlive/airootfs"
           SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
           MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
@@ -68,18 +48,29 @@ jobs:
           mkdir -p "$SYSTEMD_DIR"
           mkdir -p "$MULTI_USER_DIR"
 
-          # [Display Manager] Set SDDM as default display manager
+          # [3-1] Enable Services (Symlinks)
+          
+          # SDDM (Display Manager)
           ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
-
-          # [Network] Enable NetworkManager (plasma-meta dependency)
+          
+          # NetworkManager
           ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
-
-          # [Bluetooth] Enable Bluetooth daemon (plasma-meta dependency)
+          
+          # Bluetooth
           ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
+
+          # [3-2] Configure SDDM Auto-login
+          mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
+          cat <<EOF > "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
+          [Autologin]
+          User=arch
+          Session=plasma
+          EOF
+          
+          chmod 755 "$AIROOTFS_DIR/etc/sddm.conf.d"
 
       - name: Build ISO
         run: |
-          # Build specifying work directory (/tmp/archiso-work)
           mkarchiso -v -w /tmp/archiso-work -o ./out /tmp/archlive
 
       - name: Upload Artifact
@@ -87,11 +78,11 @@ jobs:
         with:
           name: built-iso
           path: out/*.iso
-          retention-days: 1 # Retain for 1 day to save storage
+          retention-days: 1
 
-  # [Job 2] Update Release (Ubuntu Environment)
+  # [Job 2] Update Release
   update_release:
-    needs: build_iso  # Runs only if build succeeds
+    needs: build_iso
     runs-on: ubuntu-latest
     
     steps:
@@ -105,7 +96,7 @@ jobs:
         uses: dev-drprasad/delete-tag-and-release@v1.1
         with:
           delete_release: true 
-          tag_name: rolling # Use a fixed tag name
+          tag_name: rolling
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create New Release & Upload ISO
@@ -114,8 +105,17 @@ jobs:
           name: Daily Arch Linux Plasma (Wayland)
           tag_name: rolling
           body: |
+            ### 🚀 Daily Build
             Automatic daily build of Arch Linux with KDE Plasma (Wayland).
-            Built on: ${{ github.event.repository.updated_at }}
+            
+            **Features:**
+            - **Desktop:** KDE Plasma 6 (Wayland)
+            - **Browser:** Firefox
+            - **Apps:** Kate, Ark, PartitionManager, etc.
+            - **System:** PipeWire, Bluetooth, NetworkManager
+            - **Login:** Auto-login enabled (User: `arch`)
+            
+            *Built on: ${{ github.event.repository.updated_at }}*
           files: ./iso-files/*.iso
           prerelease: false
           make_latest: true
