@@ -1,4 +1,39 @@
-# 3. System Configuration & Services
+name: Manual Arch ISO Build
+
+on:
+  workflow_dispatch:      # Allows manual trigger via the 'Actions' tab
+
+jobs:
+  build_iso:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged # Privileged mode is required for mounting filesystems
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Build Tools
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm archiso make git
+
+      - name: Configure ISO Profile
+        run: |
+          # 1. Copy default releng profile (Base system)
+          cp -r /usr/share/archiso/configs/releng /tmp/archlive
+          
+          # 2. Append Custom Packages
+          if [ -f "custom_packages.x86_64" ]; then
+            cat custom_packages.x86_64 >> /tmp/archlive/packages.x86_64
+            echo "Custom packages appended successfully."
+          else
+            echo "Error: custom_packages.x86_64 file not found!"
+            exit 1
+          fi
+
+          # 3. System Configuration & Services
           AIROOTFS_DIR="/tmp/archlive/airootfs"
           SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
           MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
@@ -13,21 +48,20 @@
 
           # ==================================================================
           # [CRITICAL FIX] Manually Create User 'arch'
-          # SDDM starts before the live script creates the user, so we inject it now.
+          # This ensures the user exists BEFORE SDDM starts.
           # ==================================================================
           
           # 1. Create User Entry in /etc/passwd (User: arch, UID: 1000, Shell: /bin/zsh)
-          # Note: We use zsh because it is the standard shell in archiso releng
+          # Explicitly creating this allows SDDM to find the user immediately.
           echo "arch:x:1000:1000::/home/arch:/bin/zsh" >> "$AIROOTFS_DIR/etc/passwd"
 
-          # 2. Create Shadow Entry (No password)
+          # 2. Create Shadow Entry (No password set)
           echo "arch:::0:99999:7:::" >> "$AIROOTFS_DIR/etc/shadow"
 
-          # 3. Create Group Entry (arch group)
+          # 3. Create Group Entry
           echo "arch:x:1000:" >> "$AIROOTFS_DIR/etc/group"
 
-          # 4. Add 'arch' to 'wheel' group (for sudo access)
-          # We append user 'arch' to the 'wheel' group line in /etc/group
+          # 4. Add 'arch' to 'wheel' group (Append user to existing wheel line)
           sed -i 's/^wheel:x:998:$/wheel:x:998:arch/' "$AIROOTFS_DIR/etc/group"
 
           # 5. Enable Passwordless Sudo for wheel group
@@ -50,10 +84,21 @@
           chmod 755 "$AIROOTFS_DIR/etc/sddm.conf.d"
 
           # [3-3] Fix Home Directory Permissions
-          # Essential! Without this, Plasma crashes immediately and loops back to SDDM.
+          # Without this, Plasma cannot write config files and crashes back to login screen.
           mkdir -p "$AIROOTFS_DIR/home/arch"
           chown -R 1000:1000 "$AIROOTFS_DIR/home/arch"
           
-          # [3-4] Fix PAM for Passwordless Login
-          # Force SDDM to accept empty password login
+          # [3-4] Fix PAM to allow passwordless login
+          # Force SDDM to accept empty password login by using pam_permit.so
           sed -i 's/^auth.*include.*system-login/auth sufficient pam_permit.so/' "$AIROOTFS_DIR/etc/pam.d/sddm"
+
+      - name: Build ISO
+        run: |
+          mkarchiso -v -w /tmp/archiso-work -o ./out /tmp/archlive
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arch-Plasma-Wayland-ISO
+          path: out/*.iso
+          retention-days: 3
