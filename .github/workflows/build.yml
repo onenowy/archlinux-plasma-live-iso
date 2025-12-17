@@ -1,40 +1,4 @@
-name: Manual Arch ISO Build
-
-on:
-  workflow_dispatch:      # Allows manual trigger via the 'Actions' tab
-
-jobs:
-  build_iso:
-    runs-on: ubuntu-latest
-    container:
-      image: archlinux:latest
-      options: --privileged # Privileged mode is required for mounting filesystems during build
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Build Tools
-        run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm archiso make git
-
-      - name: Configure ISO Profile
-        run: |
-          # 1. Copy default releng profile (Base system)
-          cp -r /usr/share/archiso/configs/releng /tmp/archlive
-          
-          # 2. Append Custom Packages
-          # Read 'custom_packages.x86_64' from the repository root and append to the ISO package list
-          if [ -f "custom_packages.x86_64" ]; then
-            cat custom_packages.x86_64 >> /tmp/archlive/packages.x86_64
-            echo "Custom packages appended successfully."
-          else
-            echo "Error: custom_packages.x86_64 file not found!"
-            exit 1
-          fi
-
-          # 3. System Configuration & Services
+# 3. System Configuration & Services
           AIROOTFS_DIR="/tmp/archlive/airootfs"
           SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
           MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
@@ -42,36 +6,54 @@ jobs:
           mkdir -p "$SYSTEMD_DIR"
           mkdir -p "$MULTI_USER_DIR"
 
-          # [3-1] Enable Services (Create Symlinks)
-          # SDDM (Display Manager) - Required for graphical login
+          # [3-1] Enable Services (Symlinks)
           ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
-          
-          # NetworkManager - Required for internet connectivity
           ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
-          
-          # Bluetooth - Required for Bluetooth devices
           ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
 
+          # ==================================================================
+          # [CRITICAL FIX] Manually Create User 'arch'
+          # SDDM starts before the live script creates the user, so we inject it now.
+          # ==================================================================
+          
+          # 1. Create User Entry in /etc/passwd (User: arch, UID: 1000, Shell: /bin/zsh)
+          # Note: We use zsh because it is the standard shell in archiso releng
+          echo "arch:x:1000:1000::/home/arch:/bin/zsh" >> "$AIROOTFS_DIR/etc/passwd"
+
+          # 2. Create Shadow Entry (No password)
+          echo "arch:::0:99999:7:::" >> "$AIROOTFS_DIR/etc/shadow"
+
+          # 3. Create Group Entry (arch group)
+          echo "arch:x:1000:" >> "$AIROOTFS_DIR/etc/group"
+
+          # 4. Add 'arch' to 'wheel' group (for sudo access)
+          # We append user 'arch' to the 'wheel' group line in /etc/group
+          sed -i 's/^wheel:x:998:$/wheel:x:998:arch/' "$AIROOTFS_DIR/etc/group"
+
+          # 5. Enable Passwordless Sudo for wheel group
+          mkdir -p "$AIROOTFS_DIR/etc/sudoers.d"
+          echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
+          chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
+
+          # ==================================================================
+          # [SDDM & Session Setup]
+          # ==================================================================
+
           # [3-2] Configure SDDM Auto-login
-          # This enables booting directly into the Plasma session without a password
           mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
           cat <<EOF > "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
           [Autologin]
           User=arch
-          Session=plasma
+          Session=plasma.desktop
+          Relogin=false
           EOF
-          
-          # Set correct permissions
           chmod 755 "$AIROOTFS_DIR/etc/sddm.conf.d"
 
-      - name: Build ISO
-        run: |
-          # Build the ISO using mkarchiso
-          mkarchiso -v -w /tmp/archiso-work -o ./out /tmp/archlive
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Arch-Plasma-Wayland-ISO
-          path: out/*.iso
-          retention-days: 3 # Keep the file for 3 days
+          # [3-3] Fix Home Directory Permissions
+          # Essential! Without this, Plasma crashes immediately and loops back to SDDM.
+          mkdir -p "$AIROOTFS_DIR/home/arch"
+          chown -R 1000:1000 "$AIROOTFS_DIR/home/arch"
+          
+          # [3-4] Fix PAM for Passwordless Login
+          # Force SDDM to accept empty password login
+          sed -i 's/^auth.*include.*system-login/auth sufficient pam_permit.so/' "$AIROOTFS_DIR/etc/pam.d/sddm"
