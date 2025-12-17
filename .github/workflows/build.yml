@@ -1,0 +1,121 @@
+name: Daily Arch ISO Build & Release
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight (UTC)
+  workflow_dispatch:      # Allows manual trigger
+
+# Write permissions required for release creation
+permissions:
+  contents: write
+
+jobs:
+  # [Job 1] Build ISO (Arch Linux Environment)
+  build_iso:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged # Privileged mode required for ISO build
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Build Tools
+        run: |
+          # Update Arch Linux container and install archiso
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm archiso make git sed
+
+      - name: Configure ISO Profile
+        run: |
+          # 1. Copy default releng profile (Base system)
+          cp -r /usr/share/archiso/configs/releng /tmp/archlive
+          
+          # 2. Append package list
+          # Append required packages after default releng packages (base, linux, etc.)
+          cat <<EOF >> /tmp/archlive/packages.x86_64
+          
+          # --- Desktop Environment ---
+          plasma-meta
+          sddm
+          egl-wayland
+          
+          # --- Apps ---
+          konsole
+          dolphin
+          firefox
+          
+          # --- Audio & Bluetooth Backend ---
+          wireplumber
+          pipewire-alsa
+          pipewire-pulse
+          
+          # --- Fonts (Korean Support) ---
+          noto-fonts
+          noto-fonts-cjk
+          noto-fonts-emoji
+          ttf-liberation
+          EOF
+
+          # 3. Enable services (Create symlinks)
+          # Configure services to start automatically on ISO boot
+          
+          AIROOTFS_DIR="/tmp/archlive/airootfs"
+          SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
+          MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
+
+          mkdir -p "$SYSTEMD_DIR"
+          mkdir -p "$MULTI_USER_DIR"
+
+          # [Display Manager] Set SDDM as default display manager
+          ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
+
+          # [Network] Enable NetworkManager (plasma-meta dependency)
+          ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
+
+          # [Bluetooth] Enable Bluetooth daemon (plasma-meta dependency)
+          ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
+
+      - name: Build ISO
+        run: |
+          # Build specifying work directory (/tmp/archiso-work)
+          mkarchiso -v -w /tmp/archiso-work -o ./out /tmp/archlive
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-iso
+          path: out/*.iso
+          retention-days: 1 # Retain for 1 day to save storage
+
+  # [Job 2] Update Release (Ubuntu Environment)
+  update_release:
+    needs: build_iso  # Runs only if build succeeds
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download ISO Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: built-iso
+          path: ./iso-files
+
+      - name: Delete Old Release & Tag
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          delete_release: true 
+          tag_name: rolling # Use a fixed tag name
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create New Release & Upload ISO
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Daily Arch Linux Plasma (Wayland)
+          tag_name: rolling
+          body: |
+            Automatic daily build of Arch Linux with KDE Plasma (Wayland).
+            Built on: ${{ github.event.repository.updated_at }}
+          files: ./iso-files/*.iso
+          prerelease: false
+          make_latest: true
