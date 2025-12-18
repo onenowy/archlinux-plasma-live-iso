@@ -1,0 +1,68 @@
+# --- [Boot & Base System] (ISO 부팅 필수) ---
+base
+linux
+linux-firmware
+grub
+efibootmgr
+dosfstools
+mtools
+mkinitcpio
+mkinitcpio-archiso
+arch-install-scripts
+sudo
+bash-completion
+
+# --- [Hardware Support] (CPU/Audio Firmware) ---
+intel-ucode
+amd-ucode
+sof-firmware
+alsa-firmware
+linux-firmware-marvell
+
+# --- [Graphics & Input Drivers] ---
+mesa
+vulkan-intel
+vulkan-radeon
+vulkan-mesa-layers
+intel-media-driver
+libva-mesa-driver
+xf86-input-libinput
+
+# --- [Desktop Environment] ---
+plasma-meta
+sddm
+egl-wayland
+
+# --- [Network & Bluetooth] ---
+networkmanager
+bluez
+bluez-utils
+
+# --- [Audio - PipeWire] ---
+pipewire
+wireplumber
+pipewire-alsa
+pipewire-pulse
+
+# --- [Apps & Utilities] ---
+konsole
+dolphin
+kate
+ark
+spectacle
+gwenview
+okular
+kcalc
+partitionmanager
+firefox
+git
+nano
+p7zip
+unrar
+ffmpegthumbs
+
+# --- [Fonts] ---
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+ttf-liberation
