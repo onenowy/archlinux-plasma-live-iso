@@ -81,9 +81,7 @@ xfsprogs
 nano
 unrar
 p7zip
-archinstall          # [ADDED] Official Easy Installer
 
 # --- [Fonts] ---
 noto-fonts
-noto-fonts-cjk
 noto-fonts-emoji
