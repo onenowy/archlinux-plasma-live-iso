@@ -2,7 +2,7 @@
 base
 linux
 linux-firmware
-syslinux             # Required for ISO generation
+syslinux
 grub
 efibootmgr
 dosfstools
@@ -28,12 +28,12 @@ libva-mesa-driver
 xf86-input-libinput
 
 # --- [Desktop Environment - Minimal] ---
-plasma-desktop       # Core desktop only (Lightweight)
+plasma-desktop
 sddm
 egl-wayland
-powerdevil           # Power Management
-kscreen              # Monitor Management
-breeze               # Theme
+powerdevil
+kscreen
+breeze
 breeze-gtk
 kde-gtk-config
 
@@ -51,27 +51,32 @@ pipewire-alsa
 pipewire-pulse
 
 # --- [Apps - Internet] ---
-firefox              # Web Browser
+firefox
 
 # --- [Apps - Essential KDE Utilities] ---
-# Matches OpenSUSE Tumbleweed default experience
-konsole              # Terminal
-dolphin              # File Manager
-kate                 # Advanced Text Editor
-ark                  # Archive Manager
-spectacle            # Screenshot Tool
-gwenview             # Image Viewer
-okular               # PDF/Document Viewer
-kcalc                # Calculator
-partitionmanager     # Partition Editor (Essential for Live ISO)
+konsole
+dolphin
+kate
+ark
+spectacle
+gwenview
+okular
+kcalc
+partitionmanager
 
-# --- [Dependencies & CLI Tools] ---
-nano                 # Simple CLI Editor
-unrar                # Backend for Ark (to open .rar)
-p7zip                # Backend for Ark (to open .7z)
-ffmpegthumbs         # Video thumbnails in Dolphin
+# --- [Filesystem Tools] (Essential for Partition Manager) ---
+ntfs-3g              # NTFS support (Windows)
+exfatprogs           # exFAT support (USB drives)
+btrfs-progs          # Btrfs support
+xfsprogs             # XFS support
+
+# --- [CLI Utilities & Dependencies] ---
+nano
+unrar
+p7zip
+ffmpegthumbs
 
 # --- [Fonts] ---
 noto-fonts
-noto-fonts-cjk       # font support
+noto-fonts-cjk
 noto-fonts-emoji
