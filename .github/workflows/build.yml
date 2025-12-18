@@ -106,9 +106,9 @@ jobs:
           fi
 
           # 3. [DIET] Remove Docs & Locales via pacman.conf
-          # This blocks installation of man pages, docs, and non-EN/KO locales to reduce size
-          sed -i '/^#NoExtract/c\NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en* !usr/share/locale/ko*' /etc/pacman.conf
-          sed -i '/^#NoExtract/c\NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en* !usr/share/locale/ko*' /tmp/archlive/pacman.conf
+          # This blocks installation of man pages, docs, and non-EN locales to reduce size
+          sed -i '/^#NoExtract/c\NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en* ' /etc/pacman.conf
+          sed -i '/^#NoExtract/c\NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en* ' /tmp/archlive/pacman.conf
 
           # 4. [COMPRESSION] Maximize XZ Compression
           sed -i "s/airootfs_image_tool_options=('-comp' 'zstd'.*)/airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')/" /tmp/archlive/profiledef.sh
