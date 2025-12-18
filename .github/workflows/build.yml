@@ -14,21 +14,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Build Tools & Fix Mirrors
+      - name: Install Build Tools
         run: |
-          # 1. Update Keyring first
-          pacman -Sy --noconfirm archlinux-keyring
-          
-          # 2. Install Archiso and Reflector
+          # [Simple] Install only necessary tools
           pacman -Syu --noconfirm
-          pacman -S --noconfirm archiso make git reflector
-
-          # 3. Update Mirrorlist (Fix 'target not found' due to stale mirrors)
-          echo "Updating mirrorlist..."
-          reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
-          
-          # 4. Refresh database
-          pacman -Syy --noconfirm
+          pacman -S --noconfirm archiso make git
 
       - name: Configure ISO Profile
         run: |
@@ -36,7 +26,7 @@ jobs:
           cp -r /usr/share/archiso/configs/releng /tmp/archlive
           
           # 2. Append Custom Packages (Cleaned)
-          # [FIX] Use sed to remove comments (#...) and trailing whitespace
+          # Use sed to remove comments and trailing spaces
           if [ -f "custom_packages.x86_64" ]; then
             echo "Appending custom packages..."
             sed 's/#.*//;s/[ \t]*$//;/^$/d' custom_packages.x86_64 >> /tmp/archlive/packages.x86_64
@@ -60,37 +50,28 @@ jobs:
           ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
 
           # ==================================================================
-          # [CRITICAL FIX] Hardware Permissions & User Setup
+          # [CRITICAL FIX] Safe User & Permission Setup
           # ==================================================================
           
-          # Ensure config files exist
-          [ ! -f "$AIROOTFS_DIR/etc/passwd" ] && touch "$AIROOTFS_DIR/etc/passwd"
-          [ ! -f "$AIROOTFS_DIR/etc/shadow" ] && touch "$AIROOTFS_DIR/etc/shadow"
-          [ ! -f "$AIROOTFS_DIR/etc/group" ] && touch "$AIROOTFS_DIR/etc/group"
-
-          # 1. Manually Create User 'arch'
-          echo "arch:x:1000:1000::/home/arch:/bin/zsh" >> "$AIROOTFS_DIR/etc/passwd"
-          echo "arch:::0:99999:7:::" >> "$AIROOTFS_DIR/etc/shadow"
-          echo "arch:x:1000:" >> "$AIROOTFS_DIR/etc/group"
+          # [Correction] Do NOT touch /etc/passwd manually. It breaks pacman hooks.
+          # Instead, we rely on the default 'releng' setup for the user 'arch'.
           
-          # 2. Add 'arch' to Hardware Groups
-          add_user_to_group() {
-            GROUP="$1"
-            USER="arch"
-            FILE="$AIROOTFS_DIR/etc/group"
-            if grep -q "^$GROUP:" "$FILE"; then
-              sed -i "s/^$GROUP:x:[0-9]*:$/&${USER}/;s/^$GROUP:x:[0-9]*:.*/&,${USER}/" "$FILE"
-              sed -i 's/,,/,/g' "$FILE"
-            else
-              echo "Warning: Group $GROUP not found in /etc/group"
-            fi
-          }
+          # 1. Add 'arch' user to critical groups securely using systemd-sysusers
+          # This creates a config file that systemd reads to modify the user groups safely.
+          mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
+          cat <<EOF > "$AIROOTFS_DIR/usr/lib/sysusers.d/arch-groups.conf"
+          # Type Name ID GECOS Home Shell
+          # Add arch to extra groups: input (mouse/kb), video/render (gpu), wheel (admin)
+          m arch input
+          m arch video
+          m arch render
+          m arch audio
+          m arch optical
+          m arch storage
+          m arch wheel
+          EOF
 
-          for group in wheel input video render audio optical storage lp; do
-             add_user_to_group "$group"
-          done
-
-          # 3. Enable Passwordless Sudo
+          # 2. Enable Passwordless Sudo
           mkdir -p "$AIROOTFS_DIR/etc/sudoers.d"
           echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
           chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
@@ -112,11 +93,14 @@ jobs:
           EOF
           chmod 755 "$AIROOTFS_DIR/etc/sddm.conf.d"
 
-          # [3-3] Fix Home Directory
+          # [3-3] Fix Home Directory Permissions
+          # Pre-create home dir so Plasma has a place to write configs.
+          # We use UID 1000 which is the standard default for the first user.
           mkdir -p "$AIROOTFS_DIR/home/arch"
           chown -R 1000:1000 "$AIROOTFS_DIR/home/arch"
           
-          # [3-4] Fix PAM
+          # [3-4] Fix PAM (Allow passwordless login)
+          # SDDM needs this to allow login without typing a password.
           mkdir -p "$AIROOTFS_DIR/etc/pam.d"
           cat <<EOF > "$AIROOTFS_DIR/etc/pam.d/sddm"
           #%PAM-1.0
