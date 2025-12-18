@@ -39,7 +39,7 @@ echo "-> Creating release and uploading artifacts..."
 gh release create daily-build ./out/*.iso ./out_hash/package.hash \
     --repo "$REPO" \
     --title "Arch Plasma Diet Build" \
-    --notes "Optimized ~1GB Build. Minimal Plasma + Split Firmware + No KMS in initramfs." \
+    --notes "Minimal Plasma + Split Firmware + No KMS in initramfs." \
     --latest \
     --target "$SHA"
 
