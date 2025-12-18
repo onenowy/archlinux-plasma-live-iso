@@ -14,18 +14,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Build Tools
+      - name: Install Build Tools & Fix Mirrors
         run: |
-          # Standard installation
+          # 1. Update Keyring & Database first to avoid signature errors
+          pacman -Sy --noconfirm archlinux-keyring
+          
+          # 2. Install Archiso and Reflector (Mirror tool)
           pacman -Syu --noconfirm
-          pacman -S --noconfirm archiso make git
+          pacman -S --noconfirm archiso make git reflector
+
+          # 3. [FIX] Update Mirrorlist to fix 'target not found' errors
+          # GitHub Runners are in the US/Azure, so we need fresh mirrors.
+          echo "Updating mirrorlist..."
+          reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
+          
+          # 4. Force refresh package database with new mirrors
+          pacman -Syy --noconfirm
 
       - name: Configure ISO Profile
         run: |
           # 1. Copy default releng profile
           cp -r /usr/share/archiso/configs/releng /tmp/archlive
           
-          # 2. Append Custom Packages
+          # 2. Append Custom Packages (Only new ones)
           if [ -f "custom_packages.x86_64" ]; then
             cat custom_packages.x86_64 >> /tmp/archlive/packages.x86_64
             echo "Custom packages appended successfully."
@@ -76,8 +87,6 @@ jobs:
           }
 
           # CRITICAL GROUPS for Real Hardware & Wayland:
-          # input: Required for direct access to keyboard/mouse
-          # video/render: Required for GPU acceleration
           for group in wheel input video render audio optical storage lp; do
              add_user_to_group "$group"
           done
