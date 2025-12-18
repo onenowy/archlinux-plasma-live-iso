@@ -2,7 +2,7 @@
 base
 linux
 linux-firmware
-syslinux
+syslinux             # Required for ISO generation
 grub
 efibootmgr
 dosfstools
@@ -64,17 +64,18 @@ okular
 kcalc
 partitionmanager
 
-# --- [Filesystem Tools] (Essential for Partition Manager) ---
-ntfs-3g              # NTFS support (Windows)
-exfatprogs           # exFAT support (USB drives)
-btrfs-progs          # Btrfs support
-xfsprogs             # XFS support
+# --- [Filesystem Tools] ---
+ntfs-3g
+exfatprogs
+btrfs-progs
+xfsprogs
 
-# --- [CLI Utilities & Dependencies] ---
+# --- [CLI Utilities] ---
 nano
 unrar
 p7zip
 ffmpegthumbs
+archinstall          # [ADDED] Official Easy Installer
 
 # --- [Fonts] ---
 noto-fonts
