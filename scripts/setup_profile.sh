@@ -11,7 +11,7 @@ echo ">>> Starting Diet Profile Setup..."
 echo "-> Copying releng profile to $WORK_DIR..."
 cp -r /usr/share/archiso/configs/releng "$WORK_DIR"
 
-# [CRITICAL FIX] Grant write permissions to all copied files
+# [CRITICAL] Grant write permissions
 chmod -R +w "$WORK_DIR"
 
 # 2. Apply Custom Package List
@@ -31,16 +31,12 @@ sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" "$WORK_DIR/pacman.conf"
 
 # 4. [INITRAMFS] Optimize Size (Target: archiso.conf)
 echo "-> Optimizing Initramfs (archiso.conf)..."
-
-# [EXACT PATH] Target the specific file
 CONF_FILE="$WORK_DIR/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
 
 if [ -f "$CONF_FILE" ]; then
     echo "   Target config: $CONF_FILE"
-    
-    # Hooks to remove
+    # Remove 'kms' and 'pxe' hooks
     HOOKS_TO_REMOVE=("kms" "archiso_pxe_common" "archiso_pxe_nbd" "archiso_pxe_http" "archiso_pxe_nfs")
-    
     for HOOK in "${HOOKS_TO_REMOVE[@]}"; do
         if grep -q "$HOOK" "$CONF_FILE"; then
             sed -i -E "s/\b$HOOK\b//g" "$CONF_FILE"
@@ -57,25 +53,34 @@ AIROOTFS_DIR="$WORK_DIR/airootfs"
 SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
 MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
 
-# 5-1. [FIX] Disable conflicting systemd-networkd services
-# The default releng profile enables systemd-networkd/resolved. We must remove them
-# to allow NetworkManager to manage the network exclusively.
-echo "   Disabling systemd-networkd & resolved conflicts..."
-rm -f "$MULTI_USER_DIR/systemd-networkd.service"
-rm -f "$MULTI_USER_DIR/systemd-resolved.service"
-rm -f "$SYSTEMD_DIR/dbus-org.freedesktop.resolve1.service"
-rm -f "$SYSTEMD_DIR/sysinit.target.wants/systemd-networkd.service" 2>/dev/null || true
+# 5-1. [FIX] Mask conflicting systemd-networkd services
+# We must use masking (/dev/null symlink) to prevent them from starting by socket activation.
+echo "   Masking systemd-networkd & resolved..."
 
-# Also remove IWD if it's enabled by default (conflicts with NM's backend)
-rm -f "$MULTI_USER_DIR/iwd.service"
+# Remove existing enable symlinks first
+find "$SYSTEMD_DIR" -name "systemd-networkd.service" -delete
+find "$SYSTEMD_DIR" -name "systemd-resolved.service" -delete
+find "$SYSTEMD_DIR" -name "systemd-networkd.socket" -delete
 
-# 5-2. Enable NetworkManager & SDDM
+# Create mask symlinks (Strong disable)
+ln -sf /dev/null "$SYSTEMD_DIR/systemd-networkd.service"
+ln -sf /dev/null "$SYSTEMD_DIR/systemd-resolved.service"
+ln -sf /dev/null "$SYSTEMD_DIR/systemd-networkd.socket"
+ln -sf /dev/null "$SYSTEMD_DIR/systemd-networkd-wait-online.service"
+
+# 5-2. [FIX] Remove broken resolv.conf symlink
+# releng points /etc/resolv.conf to systemd-resolved by default.
+# Since we masked resolved, this link is dead. We must remove it so NetworkManager can generate a new one.
+echo "   Fixing DNS configuration..."
+rm -f "$AIROOTFS_DIR/etc/resolv.conf"
+
+# 5-3. Enable NetworkManager & SDDM
 echo "   Enabling NetworkManager & SDDM..."
 mkdir -p "$MULTI_USER_DIR"
 ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
 ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
 
-# 5-3. Apply SDDM Autologin Config
+# 5-4. Apply SDDM Autologin Config
 mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
 if [ -f "$REPO_DIR/configs/autologin.conf" ]; then
     cp "$REPO_DIR/configs/autologin.conf" "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
