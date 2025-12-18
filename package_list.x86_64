@@ -1,8 +1,9 @@
-# --- [Boot & Base System] (ISO 부팅 필수) ---
+# --- [Boot & Base System] ---
 base
 linux
 linux-firmware
-grub
+syslinux             # Required by mkarchiso to build the ISO (even for UEFI)
+grub                 # Bootloader for the installed system
 efibootmgr
 dosfstools
 mtools
@@ -12,7 +13,7 @@ arch-install-scripts
 sudo
 bash-completion
 
-# --- [Hardware Support] (CPU/Audio Firmware) ---
+# --- [Hardware Support] ---
 intel-ucode
 amd-ucode
 sof-firmware
