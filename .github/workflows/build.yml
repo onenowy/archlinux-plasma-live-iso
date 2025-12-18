@@ -37,16 +37,11 @@ jobs:
           fi
           
           # 2. Compare Hash (Current vs Release)
-          # Clean the package list (remove comments and empty lines)
           sed 's/#.*//;s/[ \t]*$//;/^$/d' package_list.x86_64 > clean_list.txt
-          
-          # Resolve package versions and generate hash (Mirror independent)
           pacman -Sp --noconfirm - < clean_list.txt | sed 's|.*/||' | sort | sha256sum | awk '{print $1}' > current.hash
           
-          # Download previous hash
           gh release download daily-build -p package.hash -R ${{ github.repository }} -O old.hash || touch old.hash
           
-          # Compare
           if cmp -s current.hash old.hash; then
              echo "::notice::No updates found."
              echo "should_build=false" >> $GITHUB_OUTPUT
@@ -55,7 +50,6 @@ jobs:
              echo "should_build=true" >> $GITHUB_OUTPUT
           fi
           
-          # Prepare artifact
           mkdir -p hash_artifact
           cp current.hash hash_artifact/package.hash
 
@@ -89,7 +83,6 @@ jobs:
       - name: Install Build Tools
         run: |
           pacman -Syu --noconfirm
-          # Added github-cli to prevent "gh: command not found" error
           pacman -S --noconfirm archiso make git sed github-cli
 
       - name: Setup 'Diet' Profile & Optimization
@@ -107,14 +100,31 @@ jobs:
           fi
 
           # 3. [DIET] Remove Docs & Locales via pacman.conf
-          # This blocks installation of man pages, docs, and non-EN/KO locales to reduce size
           sed -i '/^#NoExtract/c\NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en* !usr/share/locale/ko*' /etc/pacman.conf
           sed -i '/^#NoExtract/c\NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en* !usr/share/locale/ko*' /tmp/archlive/pacman.conf
 
-          # 4. [COMPRESSION] Maximize XZ Compression
+          # 4. [ROOTFS] Maximize XZ Compression for Root Image
           sed -i "s/airootfs_image_tool_options=('-comp' 'zstd'.*)/airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')/" /tmp/archlive/profiledef.sh
 
-          # 5. Desktop Configuration
+          # 5. [INITRAMFS] Optimize Initramfs Size (The Boot Image)
+          # Target file: /tmp/archlive/mkinitcpio.conf (Config for the Live ISO, NOT the installed system)
+          
+          # A) Remove 'kms' hook to prevent GPU firmware inclusion
+          echo "Removing KMS hook from ISO mkinitcpio..."
+          sed -i 's/\<kms\>//g' /tmp/archlive/mkinitcpio.conf
+          
+          # B) Force XZ Compression with Ultra settings (-9e)
+          echo "Setting XZ compression for Initramfs..."
+          sed -i 's/^COMPRESSION=.*/COMPRESSION="xz"/' /tmp/archlive/mkinitcpio.conf
+          
+          # C) Add Compression Options if missing, or update them
+          if grep -q "COMPRESSION_OPTIONS" /tmp/archlive/mkinitcpio.conf; then
+             sed -i "s/^COMPRESSION_OPTIONS=.*/COMPRESSION_OPTIONS=('-9e')/" /tmp/archlive/mkinitcpio.conf
+          else
+             echo "COMPRESSION_OPTIONS=('-9e')" >> /tmp/archlive/mkinitcpio.conf
+          fi
+
+          # 6. Desktop Configuration
           AIROOTFS_DIR="/tmp/archlive/airootfs"
           
           # Copy SDDM Autologin config
@@ -144,22 +154,19 @@ jobs:
           echo "Managing release..."
           git config --global --add safe.directory '*'
           
-          # 1. Delete previous release if exists
           if gh release view daily-build --repo ${{ github.repository }} > /dev/null 2>&1; then
              gh release delete daily-build --yes --cleanup-tag --repo ${{ github.repository }}
           fi
           
-          # 2. Check Size (Log only)
           cd out
           ISO_FILE=$(ls *.iso | head -n 1)
           FILE_SIZE=$(stat -c%s "$ISO_FILE")
           echo "Final ISO Size: $(($FILE_SIZE / 1024 / 1024)) MB"
           cd ..
           
-          # 3. Upload ISO + Hash directly (No splitting)
           gh release create daily-build ./out/*.iso ./out_hash/package.hash \
             --repo ${{ github.repository }} \
             --title "Arch Plasma Diet Build" \
-            --notes "Optimized ~1GB Build. Minimal Plasma + Tumbleweed Utils." \
+            --notes "Optimized ~1GB Build. Minimal Plasma + Split Firmware + Highly Compressed." \
             --latest \
             --target ${{ github.sha }}
