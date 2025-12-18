@@ -11,6 +11,10 @@ echo ">>> Starting Diet Profile Setup..."
 echo "-> Copying releng profile to $WORK_DIR..."
 cp -r /usr/share/archiso/configs/releng "$WORK_DIR"
 
+# [CRITICAL FIX] Grant write permissions to all copied files
+# Files from /usr/share are often read-only, preventing 'sed' from editing them.
+chmod -R +w "$WORK_DIR"
+
 # 2. Apply Custom Package List
 if [ -f "$REPO_DIR/package_list.x86_64" ]; then
     echo "-> Applying custom package list..."
@@ -27,23 +31,37 @@ sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" /etc/pacman.conf
 sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" "$WORK_DIR/pacman.conf"
 
 # 4. [INITRAMFS] Optimize Size (Target: archiso.conf)
-# Remove 'kms' and PXE hooks to save space.
 echo "-> Optimizing Initramfs (archiso.conf)..."
 
+# Find archiso.conf specifically
 CONF_FILE=$(find "$WORK_DIR" -name "archiso.conf" | head -n 1)
 
 if [ -n "$CONF_FILE" ]; then
-    echo "   Processing config: $CONF_FILE"
+    echo "   Target config: $CONF_FILE"
     
-    # Updated removal list (kms + pxe hooks)
-    HOOKS_TO_REMOVE=("kms" "archiso_pxe_common" "archiso_pxe_nbd" "archiso_pxe_http" "archiso_pxe_nfs")
+    # [Debug] Print original HOOKS line
+    echo "   [Before] $(grep "^HOOKS" "$CONF_FILE" | cut -c 1-80)..."
+
+    # List of hooks to remove
+    HOOKS_TO_REMOVE=(
+        "kms" 
+        "archiso_pxe_common" 
+        "archiso_pxe_nbd" 
+        "archiso_pxe_http" 
+        "archiso_pxe_nfs"
+    )
     
     for HOOK in "${HOOKS_TO_REMOVE[@]}"; do
-        if grep -q "\<$HOOK\>" "$CONF_FILE"; then
-            echo "      - Removing '$HOOK' hook..."
-            sed -i "s/\<$HOOK\>//g" "$CONF_FILE"
+        # Use -E for extended regex and \b for word boundaries (More robust)
+        # We redirect output to a temp file and move it back to ensure write works
+        if grep -q "$HOOK" "$CONF_FILE"; then
+            sed -i -E "s/\b$HOOK\b//g" "$CONF_FILE"
+            echo "      - Removed '$HOOK'"
         fi
     done
+    
+    # [Debug] Print modified HOOKS line to verify
+    echo "   [After]  $(grep "^HOOKS" "$CONF_FILE" | cut -c 1-80)..."
 else
     echo "::warning::archiso.conf not found! Initramfs optimization skipped."
 fi
@@ -62,7 +80,7 @@ else
     echo "::warning::configs/autologin.conf not found!"
 fi
 
-# Enable Essential Services (SDDM & NetworkManager)
+# Enable Essential Services
 SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
 mkdir -p "$SYSTEMD_DIR/multi-user.target.wants"
 ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
@@ -71,8 +89,7 @@ ln -sf /usr/lib/systemd/system/NetworkManager.service "$SYSTEMD_DIR/multi-user.t
 # 6. [USER SETUP] Create 'arch' user for Autologin
 echo "-> Creating 'arch' user configuration..."
 
-# 6-1. Use systemd-sysusers to create the user 'arch' with UID 1000
-# This creates the user in /etc/passwd at boot/install time correctly.
+# 6-1. Use systemd-sysusers
 mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
 cat <<EOF > "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
 u arch 1000 "Arch Live User" /home/arch /bin/bash
@@ -85,18 +102,13 @@ m arch network
 m arch power
 EOF
 
-# 6-2. Create Home Directory
-# We must create the directory so permissions can be applied
+# 6-2. Create Home Directory & Permissions
 mkdir -p "$AIROOTFS_DIR/home/arch"
-
-# 6-3. Set Home Directory Permissions in profiledef.sh
-# This ensures /home/arch is owned by arch:arch (1000:1000)
 cat <<EOF >> "$WORK_DIR/profiledef.sh"
 file_permissions+=(["/home/arch"]="1000:1000:755")
 EOF
 
-# 6-4. Enable Passwordless Sudo for 'wheel' group
-# This allows the 'arch' user to use sudo without a password
+# 6-3. Enable Passwordless Sudo
 mkdir -p "$AIROOTFS_DIR/etc/sudoers.d"
 echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
 chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
