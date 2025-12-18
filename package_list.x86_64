@@ -28,12 +28,11 @@ libva-mesa-driver
 xf86-input-libinput
 
 # --- [Desktop Environment - Minimal] ---
-# Using plasma-desktop instead of meta to save space
-plasma-desktop
+plasma-desktop       # Core desktop only (Lightweight)
 sddm
 egl-wayland
-powerdevil           # Power management
-kscreen              # Screen management
+powerdevil           # Power Management
+kscreen              # Monitor Management
 breeze               # Theme
 breeze-gtk
 kde-gtk-config
@@ -51,15 +50,28 @@ wireplumber
 pipewire-alsa
 pipewire-pulse
 
-# --- [Apps] ---
-konsole
-dolphin
-firefox              # Web Browser (Added)
-nano
-p7zip
-ffmpegthumbs
+# --- [Apps - Internet] ---
+firefox              # Web Browser
 
-# --- [Fonts - Minimal] ---
+# --- [Apps - Essential KDE Utilities] ---
+# Matches OpenSUSE Tumbleweed default experience
+konsole              # Terminal
+dolphin              # File Manager
+kate                 # Advanced Text Editor
+ark                  # Archive Manager
+spectacle            # Screenshot Tool
+gwenview             # Image Viewer
+okular               # PDF/Document Viewer
+kcalc                # Calculator
+partitionmanager     # Partition Editor (Essential for Live ISO)
+
+# --- [Dependencies & CLI Tools] ---
+nano                 # Simple CLI Editor
+unrar                # Backend for Ark (to open .rar)
+p7zip                # Backend for Ark (to open .7z)
+ffmpegthumbs         # Video thumbnails in Dolphin
+
+# --- [Fonts] ---
 noto-fonts
-noto-fonts-cjk       # Korean font support
+noto-fonts-cjk       # font support
 noto-fonts-emoji
