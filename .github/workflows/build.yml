@@ -1,16 +1,92 @@
-name: Arch Plasma ISO Build & Release
+name: Arch Plasma ISO Build & Release (Smart Update)
 
 on:
   workflow_dispatch:      # Manual trigger only
-  
-  # schedule:
-  #   - cron: '0 19 * * *'
+  schedule:
+    - cron: '0 0 * * *'
 
 permissions:
-  contents: write  # Required to create/delete releases
+  contents: write  # Required for managing Releases
 
 jobs:
+  # ==================================================================
+  # JOB 1: Check for Package Updates
+  # ==================================================================
+  check_updates:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Utilities
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm git sed github-cli
+
+      - name: Check Package Versions
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. Configure Git safe directory
+          git config --global --add safe.directory '*'
+
+          # 2. Sanitize package list (remove comments and whitespace)
+          if [ -f "package_list.x86_64" ]; then
+            sed 's/#.*//;s/[ \t]*$//;/^$/d' package_list.x86_64 > clean_package_list.txt
+          else
+            echo "Error: package_list.x86_64 not found!"
+            exit 1
+          fi
+
+          # 3. Resolve current package URLs and generate hash
+          # 'pacman -Sp' lists download URLs which include version numbers.
+          # Any change in version will result in a different SHA256 hash.
+          echo "Resolving current package versions..."
+          pacman -Sp --noconfirm - < clean_package_list.txt | sort | sha256sum | awk '{print $1}' > current_packages.hash
+          
+          echo "Current Hash: $(cat current_packages.hash)"
+
+          # 4. Download previous hash for comparison
+          echo "Downloading previous hash..."
+          # If download fails (e.g., first run), create an empty file to force a build.
+          gh release download daily-build -p package.hash --repo ${{ github.repository }} -O old_packages.hash || touch old_packages.hash
+          
+          echo "Old Hash: $(cat old_packages.hash)"
+
+          # 5. Compare hashes and determine if build is needed
+          if cmp -s current_packages.hash old_packages.hash; then
+            echo "::notice::No package updates found. Skipping build."
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "::notice::Updates detected! Triggering build."
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+          
+          # Prepare hash artifact for the build job
+          mkdir -p hash_artifact
+          cp current_packages.hash hash_artifact/package.hash
+
+      - name: Upload Hash Artifact
+        if: steps.check.outputs.should_build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-hash
+          path: hash_artifact/package.hash
+
+  # ==================================================================
+  # JOB 2: Build & Release ISO
+  # ==================================================================
   build_iso:
+    needs: check_updates
+    # Run ONLY if updates are detected OR if triggered manually
+    if: needs.check_updates.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
+    
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
@@ -19,6 +95,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # Download the new hash from the check_updates job
+      - name: Download Hash Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: package-hash
+          path: out_hash
 
       - name: Install Build Tools
         run: |
@@ -30,12 +113,10 @@ jobs:
 
       - name: Configure Clean Profile
         run: |
-          # 1. Copy releng skeleton
+          # Copy releng skeleton
           cp -r /usr/share/archiso/configs/releng /tmp/archlive
           
-          # ==================================================================
-          # [STEP 1] Overwrite Package List (Minimal)
-          # ==================================================================
+          # [STEP 1] Overwrite Package List
           if [ -f "package_list.x86_64" ]; then
             echo "Overwriting package list..."
             sed 's/#.*//;s/[ \t]*$//;/^$/d' package_list.x86_64 > /tmp/archlive/packages.x86_64
@@ -44,16 +125,11 @@ jobs:
             exit 1
           fi
 
-          # ==================================================================
-          # [STEP 1.5] Maximize Compression (XZ) - Forceful Apply
-          # ==================================================================
-          # Use regex to replace the compression setting, ensuring it matches.
-          # This forces XZ compression to keep ISO size under 2GB.
+          # [STEP 1.5] Maximize Compression (XZ)
+          # Force XZ compression to keep ISO size small (~1.2GB)
           sed -i "s/airootfs_image_tool_options=('-comp' 'zstd'.*)/airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')/" /tmp/archlive/profiledef.sh
 
-          # ==================================================================
           # [STEP 2] Reset Services & Cleanup Residue
-          # ==================================================================
           AIROOTFS_DIR="/tmp/archlive/airootfs"
           SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
           MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
@@ -66,9 +142,7 @@ jobs:
           # Remove releng install scripts residue
           rm -f "$AIROOTFS_DIR/root/install.txt"
           
-          # ==================================================================
           # [STEP 3] Safe User & Permission Setup
-          # ==================================================================
           mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
           cat <<EOF > "$AIROOTFS_DIR/usr/lib/sysusers.d/arch-groups.conf"
           u arch 1000 "Arch Linux Live User" /home/arch /bin/bash
@@ -87,16 +161,13 @@ jobs:
           echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
           chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
 
-          # ==================================================================
           # [STEP 4] Enable Essential Services
-          # ==================================================================
           ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
           ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
           ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
 
-          # ==================================================================
           # [STEP 5] Desktop Configuration
-          # ==================================================================
+          # Configure SDDM: Autologin & Wayland
           mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
           cat <<EOF > "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
           [Autologin]
@@ -108,9 +179,11 @@ jobs:
           EOF
           chmod 755 "$AIROOTFS_DIR/etc/sddm.conf.d"
 
+          # Setup Home Directory
           mkdir -p "$AIROOTFS_DIR/home/arch"
           chown -R 1000:1000 "$AIROOTFS_DIR/home/arch"
           
+          # Fix PAM for passwordless login
           mkdir -p "$AIROOTFS_DIR/etc/pam.d"
           cat <<EOF > "$AIROOTFS_DIR/etc/pam.d/sddm"
           #%PAM-1.0
@@ -125,23 +198,24 @@ jobs:
           mkarchiso -v -w /tmp/archiso-work -o ./out /tmp/archlive
 
       # ==================================================================
-      # [Release Step] Using GitHub CLI (gh)
+      # [Release Step] Using GitHub CLI
       # ==================================================================
-      
       - name: Create Release and Upload
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Managing release..."
           
-          # Force git to trust the directory inside the container
+          # Fix git directory safety for container
           git config --global --add safe.directory '*'
 
           # 1. Delete old release/tag if it exists
+          # Use --repo to specify the repository explicitly
           gh release delete daily-build --yes --cleanup-tag --repo ${{ github.repository }} || true
           
-          # 2. Create new release and upload ISO
-          gh release create daily-build ./out/*.iso \
+          # 2. Upload ISO AND the new hash file
+          # The hash file is crucial for the next scheduled check.
+          gh release create daily-build ./out/*.iso ./out_hash/package.hash \
             --repo ${{ github.repository }} \
             --title "Arch Linux Plasma (Wayland) Daily Build" \
             --notes "Automated build. Compressed with XZ. Contains minimal Plasma, Firefox, and essential utilities." \
