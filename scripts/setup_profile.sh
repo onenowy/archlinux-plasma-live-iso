@@ -33,16 +33,18 @@ sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" "$WORK_DIR/pacman.conf"
 # 4. [INITRAMFS] Optimize Size (Target: archiso.conf)
 echo "-> Optimizing Initramfs (archiso.conf)..."
 
-# Find archiso.conf specifically
-CONF_FILE=$(find "$WORK_DIR" -name "archiso.conf" | head -n 1)
+# [EXACT PATH FIX] Directly target the file used by mkinitcpio-archiso
+# Do NOT use 'find' to avoid modifying wrong files.
+CONF_FILE="$WORK_DIR/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
 
-if [ -n "$CONF_FILE" ]; then
+if [ -f "$CONF_FILE" ]; then
     echo "   Target config: $CONF_FILE"
     
-    # [Debug] Print original HOOKS line
+    # [Debug] Print original HOOKS line (truncated)
     echo "   [Before] $(grep "^HOOKS" "$CONF_FILE" | cut -c 1-80)..."
 
     # List of hooks to remove
+    # Removed 'kms' to save space and 'archiso_pxe_*' for USB-only usage
     HOOKS_TO_REMOVE=(
         "kms" 
         "archiso_pxe_common" 
@@ -52,8 +54,7 @@ if [ -n "$CONF_FILE" ]; then
     )
     
     for HOOK in "${HOOKS_TO_REMOVE[@]}"; do
-        # Use -E for extended regex and \b for word boundaries (More robust)
-        # We redirect output to a temp file and move it back to ensure write works
+        # Use -E for extended regex and \b for word boundaries
         if grep -q "$HOOK" "$CONF_FILE"; then
             sed -i -E "s/\b$HOOK\b//g" "$CONF_FILE"
             echo "      - Removed '$HOOK'"
@@ -63,7 +64,12 @@ if [ -n "$CONF_FILE" ]; then
     # [Debug] Print modified HOOKS line to verify
     echo "   [After]  $(grep "^HOOKS" "$CONF_FILE" | cut -c 1-80)..."
 else
-    echo "::warning::archiso.conf not found! Initramfs optimization skipped."
+    echo "::warning::Config file '$CONF_FILE' not found! Initramfs optimization skipped."
+    # If using an older profile, check the fallback location
+    FALLBACK_CONF="$WORK_DIR/airootfs/etc/mkinitcpio.conf"
+    if [ -f "$FALLBACK_CONF" ]; then
+        echo "::notice::Found fallback config at $FALLBACK_CONF. Check if optimization is needed manually."
+    fi
 fi
 
 # 5. Desktop Configuration
