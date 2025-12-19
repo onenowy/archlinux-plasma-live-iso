@@ -2,9 +2,9 @@ name: Arch Plasma ISO
 
 on:
   workflow_dispatch:      # Manual trigger
-  schedule:
+  #schedule:
     # Run daily at 00:00 UTC
-    - cron: '0 0 * * *'
+    #- cron: '0 0 * * *'
 
 permissions:
   contents: write
