@@ -4,15 +4,14 @@ set -e
 # Define Paths
 WORK_DIR="/tmp/archlive"
 REPO_DIR=$(pwd)
-
-# [OPTION] Set COW Space Size
-COW_SPACE_SIZE="4G"
+CONFIG_DIR="$REPO_DIR/configs"
 
 echo ">>> Starting Custom Profile Setup..."
 
 # 1. Copy Releng Profile
 echo "-> Copying releng profile to $WORK_DIR..."
 cp -r /usr/share/archiso/configs/releng "$WORK_DIR"
+# [CRITICAL] Grant write permissions for modification
 chmod -R +w "$WORK_DIR"
 
 # 2. Apply Custom Package List
@@ -30,7 +29,7 @@ NO_EXTRACT_RULE="NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* u
 sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" /etc/pacman.conf
 sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" "$WORK_DIR/pacman.conf"
 
-# 4. [INITRAMFS] Optimize Size
+# 4. [INITRAMFS] Optimize Size (Remove KMS & PXE Hooks)
 echo "-> Optimizing Initramfs (archiso.conf)..."
 CONF_FILE="$WORK_DIR/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
 if [ -f "$CONF_FILE" ]; then
@@ -42,23 +41,14 @@ if [ -f "$CONF_FILE" ]; then
     done
 fi
 
-# 5. [BOOTLOADER] Increase COW Space
-echo "-> Setting COW Space to $COW_SPACE_SIZE..."
-UEFI_CONFS=$(find "$WORK_DIR/efiboot/loader/entries" -name "*.conf")
-for CONF in $UEFI_CONFS; do
-    grep -q "^options" "$CONF" && sed -i "/^options/ s/$/ cow_spacesize=$COW_SPACE_SIZE/" "$CONF"
-done
-
-SYSLINUX_CONF="$WORK_DIR/syslinux/archiso_sys-linux.cfg"
-[ -f "$SYSLINUX_CONF" ] && sed -i "/^APPEND/ s/$/ cow_spacesize=$COW_SPACE_SIZE/" "$SYSLINUX_CONF"
-
-# 6. [NETWORK & DESKTOP] Fix Conflicts
+# 5. [NETWORK & DESKTOP] Fix Conflicts & Enable Services
 echo "-> Configuring Desktop & Network..."
 AIROOTFS_DIR="$WORK_DIR/airootfs"
 SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
 MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
 
-# Mask systemd-networkd & resolved
+# 5-1. Mask conflicting systemd-networkd services
+# This prevents race conditions with NetworkManager
 find "$SYSTEMD_DIR" -name "systemd-networkd.service" -delete
 find "$SYSTEMD_DIR" -name "systemd-resolved.service" -delete
 find "$SYSTEMD_DIR" -name "systemd-networkd.socket" -delete
@@ -66,59 +56,61 @@ find "$SYSTEMD_DIR" -name "systemd-networkd.socket" -delete
 ln -sf /dev/null "$SYSTEMD_DIR/systemd-networkd.service"
 ln -sf /dev/null "$SYSTEMD_DIR/systemd-resolved.service"
 ln -sf /dev/null "$SYSTEMD_DIR/systemd-networkd-wait-online.service"
+
+# 5-2. Remove broken resolv.conf symlink
+# Essential for NetworkManager to generate a valid DNS config
 rm -f "$AIROOTFS_DIR/etc/resolv.conf"
 
-# Enable NetworkManager & SDDM
+# 5-3. Enable NetworkManager & SDDM
 mkdir -p "$MULTI_USER_DIR"
 ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
 ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
 
-# SDDM Autologin
+# 5-4. SDDM Autologin Config (Copy from external file)
 mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
-if [ -f "$REPO_DIR/configs/autologin.conf" ]; then
-    cp "$REPO_DIR/configs/autologin.conf" "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
+if [ -f "$CONFIG_DIR/autologin.conf" ]; then
+    cp "$CONFIG_DIR/autologin.conf" "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
     chmod 644 "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
+else
+    echo "::warning::configs/autologin.conf not found!"
 fi
 
-# 7. [USER SETUP] Create 'arch' user with Full Privileges
+# 6. [USER SETUP] Configure User & Privileges using external files
 echo "-> Creating 'arch' user configuration..."
 
-# 7-1. Create User
+# 6-1. User Creation (sysusers.d)
 mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
-cat <<EOF > "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
-u arch 1000 "Arch Live User" /home/arch /bin/bash
-m arch wheel
-m arch video
-m arch audio
-m arch storage
-m arch optical
-m arch network
-m arch power
-EOF
+if [ -f "$CONFIG_DIR/archiso-user.conf" ]; then
+    cp "$CONFIG_DIR/archiso-user.conf" "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
+else
+    echo "::error::configs/archiso-user.conf not found!"
+    exit 1
+fi
 
-# 7-2. Setup Home Directory
+# 6-2. Setup Home Directory & Permissions
 mkdir -p "$AIROOTFS_DIR/home/arch"
-cat <<EOF >> "$WORK_DIR/profiledef.sh"
-file_permissions+=(["/home/arch"]="1000:1000:755")
-EOF
+# Append custom permissions to profiledef.sh
+if [ -f "$CONFIG_DIR/profiledef_custom.sh" ]; then
+    cat "$CONFIG_DIR/profiledef_custom.sh" >> "$WORK_DIR/profiledef.sh"
+else
+    echo "::warning::configs/profiledef_custom.sh not found! Home dir permissions might be wrong."
+fi
 
-# 7-3. Sudoers (CLI): Allow passwordless sudo for wheel
+# 6-3. Sudoers (CLI) - Passwordless Sudo
 mkdir -p "$AIROOTFS_DIR/etc/sudoers.d"
-echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
-chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
+if [ -f "$CONFIG_DIR/00-wheel-nopasswd" ]; then
+    cp "$CONFIG_DIR/00-wheel-nopasswd" "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
+    chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
+else
+    echo "::warning::configs/00-wheel-nopasswd not found!"
+fi
 
-# 7-4. [CRITICAL FIX] Polkit (GUI): Allow passwordless actions for wheel
-# This prevents Dolphin/Plasma from asking for root password for mounting, etc.
+# 6-4. Polkit (GUI) - Passwordless Admin Actions
 mkdir -p "$AIROOTFS_DIR/etc/polkit-1/rules.d"
-cat <<EOF > "$AIROOTFS_DIR/etc/polkit-1/rules.d/49-nopasswd_global.rules"
-/* Allow members of the wheel group to execute any actions
- * without password authentication, similar to NOPASSWD in sudoers.
- */
-polkit.addRule(function(action, subject) {
-    if (subject.isInGroup("wheel")) {
-        return polkit.Result.YES;
-    }
-});
-EOF
+if [ -f "$CONFIG_DIR/49-nopasswd_global.rules" ]; then
+    cp "$CONFIG_DIR/49-nopasswd_global.rules" "$AIROOTFS_DIR/etc/polkit-1/rules.d/49-nopasswd_global.rules"
+else
+    echo "::warning::configs/49-nopasswd_global.rules not found!"
+fi
 
 echo ">>> Profile Setup Complete."
