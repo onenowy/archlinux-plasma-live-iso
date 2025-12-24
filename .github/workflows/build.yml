@@ -3,16 +3,15 @@ name: Arch Plasma ISO
 on:
   workflow_dispatch:      # Manual trigger
   #schedule:
-    # Run daily at 00:00 UTC
-    #- cron: '0 0 * * *'
+    #- cron: '0 0 * * *'  # Daily check
 
 permissions:
   contents: write
 
 jobs:
-  # ==================================================================
-  # JOB 1: Check for Package Updates
-  # ==================================================================
+  # ------------------------------------------------------------------
+  # JOB 1: Check for Package Updates (Keep original logic)
+  # ------------------------------------------------------------------
   check_updates:
     runs-on: ubuntu-latest
     container: archlinux:latest
@@ -21,12 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # [SCRIPT] Run Update Check
+      # Install basic tools for the script
       - name: Run Update Check Script
         id: check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          pacman -Syu --noconfirm git
           chmod +x scripts/check_updates.sh
           ./scripts/check_updates.sh
 
@@ -36,9 +36,9 @@ jobs:
           name: package-hash
           path: hash_artifact/package.hash
 
-  # ==================================================================
-  # JOB 2: Build ISO
-  # ==================================================================
+  # ------------------------------------------------------------------
+  # JOB 2: Build ISO (Added EROFS support)
+  # ------------------------------------------------------------------
   build_iso:
     needs: check_updates
     if: needs.check_updates.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
@@ -57,23 +57,28 @@ jobs:
           name: package-hash
           path: out_hash
 
+      # Install dependencies (Must include erofs-utils)
       - name: Install Build Tools
         run: |
           pacman -Syu --noconfirm
-          pacman -S --noconfirm archiso make git sed github-cli
+          pacman -S --noconfirm archiso make git sed github-cli erofs-utils
 
-      # [SCRIPT] Setup Profile & Optimizations
+      # Fix git permission for container environment
+      - name: Fix Git Directory Permissions
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Setup Custom Profile (EROFS, configs, etc.)
       - name: Setup 'Diet' Profile
         run: |
           chmod +x scripts/setup_profile.sh
           ./scripts/setup_profile.sh
 
-      # Actual ISO Build Command
+      # Build ISO using mkarchiso
       - name: Build ISO
         run: |
           mkarchiso -v -w /tmp/archiso-work -o ./out /tmp/archlive
 
-      # [SCRIPT] Create Release & Upload
+      # Create Release & Upload
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
