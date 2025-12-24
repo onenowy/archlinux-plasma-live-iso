@@ -1,16 +1,22 @@
 name: Arch Plasma ISO
 
 on:
-  workflow_dispatch:      # Manual trigger
+  workflow_dispatch:
   #schedule:
-    #- cron: '0 0 * * *'  # Daily check
+    #- cron: '0 0 * * *'
+
+# [OPTIMIZATION] Define paths globally to ensure scripts and YAML use the same paths
+env:
+  BUILD_DIR: "/tmp/archlive"       # Target directory where the profile is copied
+  WORK_DIR: "/tmp/archiso-work"    # Working directory for mkarchiso
+  OUT_DIR: "./out"                 # Output directory for the ISO
 
 permissions:
   contents: write
 
 jobs:
   # ------------------------------------------------------------------
-  # JOB 1: Check for Package Updates (Keep original logic)
+  # JOB 1: Check for Package Updates
   # ------------------------------------------------------------------
   check_updates:
     runs-on: ubuntu-latest
@@ -20,13 +26,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Install basic tools for the script
+      # [OPTIMIZATION] Install dependencies for check_updates.sh here
+      # git, sed, github-cli are required by your advanced script
+      - name: Install Dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm git sed github-cli
+
+      # [FIX] Git Safe Directory for the container
+      - name: Fix Git Directory Permissions
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Run Update Check Script
         id: check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pacman -Syu --noconfirm git
           chmod +x scripts/check_updates.sh
           ./scripts/check_updates.sh
 
@@ -37,7 +52,7 @@ jobs:
           path: hash_artifact/package.hash
 
   # ------------------------------------------------------------------
-  # JOB 2: Build ISO (Added EROFS support)
+  # JOB 2: Build ISO (EROFS Support)
   # ------------------------------------------------------------------
   build_iso:
     needs: check_updates
@@ -57,31 +72,30 @@ jobs:
           name: package-hash
           path: out_hash
 
-      # Install dependencies (Must include erofs-utils)
+      # [OPTIMIZATION] Install build tools here (Removed from setup_profile.sh)
+      # erofs-utils: Required for EROFS filesystem
       - name: Install Build Tools
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm archiso make git sed github-cli erofs-utils
 
-      # Fix git permission for container environment
       - name: Fix Git Directory Permissions
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      # Setup Custom Profile (EROFS, configs, etc.)
-      - name: Setup Custom Profile
-        run: |
-          chmod +x scripts/setup_profile.sh
-          ./scripts/setup_profile.sh
+      - name: Make Scripts Executable
+        run: chmod +x scripts/*.sh
 
-      # Build ISO using mkarchiso
+      # [CHANGED] Uses 'Custom' name and $BUILD_DIR env var
+      - name: Setup 'Custom' Profile
+        run: ./scripts/setup_profile.sh
+
+      # Build ISO using defined Env Vars
       - name: Build ISO
         run: |
-          mkarchiso -v -w /tmp/archiso-work -o ./out /tmp/archlive
+          mkdir -p $OUT_DIR
+          mkarchiso -v -w $WORK_DIR -o $OUT_DIR $BUILD_DIR
 
-      # Create Release & Upload
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          chmod +x scripts/create_release.sh
-          ./scripts/create_release.sh
+        run: ./scripts/create_release.sh

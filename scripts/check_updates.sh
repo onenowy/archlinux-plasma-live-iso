@@ -3,10 +3,9 @@ set -e
 
 echo ">>> Checking for Package Updates..."
 
-# 1. Setup Environment (Install minimal tools)
-pacman -Syu --noconfirm
-pacman -S --noconfirm git sed github-cli
-git config --global --add safe.directory '*'
+# 1. Setup Environment
+# [NOTE] Dependencies (git, sed, github-cli) are now installed via build.yml.
+# We do not install them here to avoid redundancy.
 
 # 2. Check Package List File
 if [ ! -f "package_list.x86_64" ]; then
@@ -20,13 +19,14 @@ echo "-> Generating hash from package_list.x86_64..."
 sed 's/#.*//;s/[ \t]*$//;/^$/d' package_list.x86_64 > clean_list.txt
 
 # Resolve URLs -> filenames -> hash (Mirror independent)
+# This detects if UPSTREAM packages have updated.
 pacman -Sp --noconfirm - < clean_list.txt | sed 's|.*/||' | sort | sha256sum | awk '{print $1}' > current.hash
 
 echo "   Current Hash: $(cat current.hash)"
 
 # 4. Download Previous Hash
 echo "-> Downloading previous hash..."
-# GITHUB_REPOSITORY env var is automatically provided by Actions
+# Downloads 'package.hash' from the 'daily-build' release
 gh release download daily-build -p package.hash -R "$GITHUB_REPOSITORY" -O old.hash || touch old.hash
 
 echo "   Old Hash:     $(cat old.hash)"
