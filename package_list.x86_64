@@ -44,6 +44,7 @@ xdg-user-dirs
 # --- [Network & Bluetooth GUI] ---
 plasma-nm
 bluedevil
+iptables-nft
 
 # --- [Audio GUI] ---
 plasma-pa
@@ -51,6 +52,7 @@ plasma-pa
 # --- [Audio Backend] ---
 wireplumber
 pipewire-pulse
+pipewire-jack
 
 # --- [Apps - Internet] ---
 firefox
