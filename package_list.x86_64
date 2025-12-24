@@ -1,8 +1,6 @@
 # --- [Boot & Base System] ---
 base
 linux
-syslinux             # Required for ISO generation
-grub
 efibootmgr
 dosfstools
 mkinitcpio
