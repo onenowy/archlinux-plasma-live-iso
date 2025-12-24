@@ -68,7 +68,7 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       # Setup Custom Profile (EROFS, configs, etc.)
-      - name: Setup 'Diet' Profile
+      - name: Setup Custom Profile
         run: |
           chmod +x scripts/setup_profile.sh
           ./scripts/setup_profile.sh
