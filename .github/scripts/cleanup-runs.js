@@ -2,6 +2,20 @@ module.exports = async ({ github, context }) => {
   const fs = require('fs');
   const config = JSON.parse(fs.readFileSync('.github/cleanup-config.json', 'utf8'));
 
+  // Get workflow ID -> name mapping
+  const workflows = await github.paginate(
+    github.rest.actions.listRepoWorkflows,
+    {
+      owner: context.repo.owner,
+      repo: context.repo.repo
+    }
+  );
+
+  const workflowNames = new Map();
+  for (const wf of workflows) {
+    workflowNames.set(wf.id, wf.name);
+  }
+
   const runs = await github.paginate(
     github.rest.actions.listWorkflowRunsForRepo,
     {
@@ -11,11 +25,13 @@ module.exports = async ({ github, context }) => {
     }
   );
 
-  // Group runs by workflow name
+  // Group runs by workflow name (using workflow_id)
   const groupedRuns = {};
   for (const run of runs) {
-    if (!groupedRuns[run.name]) groupedRuns[run.name] = [];
-    groupedRuns[run.name].push(run);
+    const workflowName = workflowNames.get(run.workflow_id);
+    if (!workflowName) continue;
+    if (!groupedRuns[workflowName]) groupedRuns[workflowName] = [];
+    groupedRuns[workflowName].push(run);
   }
 
   // Clean up each workflow
