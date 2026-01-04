@@ -1,7 +1,7 @@
 {
   "defaultKeep": 5,
   "workflows": {
-    "Arch Plasma ISO": 23,
+    "Arch Plasma ISO": 10,
     "Periodic Cleanup": 2
   }
 }
