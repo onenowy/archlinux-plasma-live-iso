@@ -16,47 +16,9 @@ permissions:
 
 jobs:
   # ------------------------------------------------------------------
-  # JOB 1: Check for Package Updates
-  # ------------------------------------------------------------------
-  check_updates:
-    runs-on: ubuntu-latest
-    container: archlinux:latest
-    outputs:
-      should_build: ${{ steps.check.outputs.should_build }}
-    steps:
-      - uses: actions/checkout@v4
-
-      # [OPTIMIZATION] Install dependencies for check_updates.sh here
-      # git, sed, github-cli are required by your advanced script
-      - name: Install Dependencies
-        run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm git sed github-cli
-
-      # [FIX] Git Safe Directory for the container
-      - name: Fix Git Directory Permissions
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Run Update Check Script
-        id: check
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          chmod +x scripts/check_updates.sh
-          ./scripts/check_updates.sh
-
-      - uses: actions/upload-artifact@v4
-        if: steps.check.outputs.should_build == 'true'
-        with:
-          name: package-hash
-          path: hash_artifact/package.hash
-
-  # ------------------------------------------------------------------
-  # JOB 2: Build ISO (EROFS Support)
+  # Build ISO (EROFS Support)
   # ------------------------------------------------------------------
   build_iso:
-    needs: check_updates
-    if: needs.check_updates.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
@@ -65,12 +27,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Download Hash Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: package-hash
-          path: out_hash
 
       # [OPTIMIZATION] Install build tools here (Removed from setup_profile.sh)
       # erofs-utils: Required for EROFS filesystem
