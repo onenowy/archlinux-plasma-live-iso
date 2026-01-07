@@ -29,7 +29,6 @@ vulkan-intel
 vulkan-radeon
 intel-media-driver
 libva-mesa-driver
-xf86-input-libinput
 
 # --- [Desktop Environment - Minimal] ---
 plasma-desktop
