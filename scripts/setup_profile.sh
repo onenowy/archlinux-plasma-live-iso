@@ -25,7 +25,7 @@ fi
 
 # 3. Pacman Config (Exclude Docs/Locales)
 echo "-> Configuring pacman exclusions..."
-NO_EXTRACT_RULE="NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en* !usr/share/locale/ko*"
+NO_EXTRACT_RULE="NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en*"
 sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" /etc/pacman.conf
 sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" "$TARGET_DIR/pacman.conf"
 
