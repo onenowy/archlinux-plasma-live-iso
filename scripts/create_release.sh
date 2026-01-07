@@ -11,9 +11,9 @@ REPO="$GITHUB_REPOSITORY"   # Automatically provided by Actions
 SHA="$GITHUB_SHA"           # Automatically provided by Actions
 
 # 3. Check & Delete Previous Release
-if gh release view daily-build --repo "$REPO" > /dev/null 2>&1; then
-    echo "-> Deleting existing 'daily-build' release..."
-    gh release delete daily-build --yes --cleanup-tag --repo "$REPO"
+if gh release view iso-build --repo "$REPO" > /dev/null 2>&1; then
+    echo "-> Deleting existing 'iso-build' release..."
+    gh release delete iso-build --yes --cleanup-tag --repo "$REPO"
 else
     echo "-> No existing release found. Creating a new one."
 fi
@@ -36,7 +36,7 @@ fi
 echo "-> Creating release and uploading artifacts..."
 
 # Note: Adjust the --notes content as needed
-gh release create daily-build ./out/*.iso ./out_hash/package.hash \
+gh release create iso-build ./out/*.iso ./out_hash/package.hash \
     --repo "$REPO" \
     --title "Arch Plasma Build" \
     --notes "Arch Linux Plasma ISO" \
