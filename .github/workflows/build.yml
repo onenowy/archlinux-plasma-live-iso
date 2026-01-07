@@ -10,6 +10,7 @@ env:
   BUILD_DIR: "/tmp/archlive"       # Target directory where the profile is copied
   WORK_DIR: "/tmp/archiso-work"    # Working directory for mkarchiso
   OUT_DIR: "./out"                 # Output directory for the ISO
+  RELEASE_TAG: "iso-build"         # Release tag name
 
 permissions:
   contents: write

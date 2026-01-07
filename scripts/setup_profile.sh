@@ -1,23 +1,21 @@
 #!/bin/bash
 set -e
 
-# [OPTIMIZATION] Use BUILD_DIR from YAML env, fallback to default if missing
-TARGET_DIR="${BUILD_DIR:-/tmp/archlive}"
 REPO_DIR=$(pwd)
 CONFIG_DIR="$REPO_DIR/configs"
 
 echo ">>> Starting Custom Profile Setup..."
-echo "-> Working Target: $TARGET_DIR"
+echo "-> Working Target: $BUILD_DIR"
 
 # 1. Copy Base Profile (releng)
 echo "-> Copying releng profile..."
-cp -r /usr/share/archiso/configs/releng "$TARGET_DIR"
-chmod -R +w "$TARGET_DIR"
+cp -r /usr/share/archiso/configs/releng "$BUILD_DIR"
+chmod -R +w "$BUILD_DIR"
 
 # 2. Apply Custom Packages
 if [ -f "$REPO_DIR/package_list.x86_64" ]; then
     echo "-> Applying custom package list..."
-    sed 's/#.*//;s/[ \t]*$//;/^$/d' "$REPO_DIR/package_list.x86_64" > "$TARGET_DIR/packages.x86_64"
+    sed 's/#.*//;s/[ \t]*$//;/^$/d' "$REPO_DIR/package_list.x86_64" > "$BUILD_DIR/packages.x86_64"
 else
     echo "::error::package_list.x86_64 not found!"
     exit 1
@@ -27,11 +25,11 @@ fi
 echo "-> Configuring pacman exclusions..."
 NO_EXTRACT_RULE="NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en*"
 sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" /etc/pacman.conf
-sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" "$TARGET_DIR/pacman.conf"
+sed -i "/^#NoExtract/c\\$NO_EXTRACT_RULE" "$BUILD_DIR/pacman.conf"
 
 # 4. Initramfs Optimization (Remove KMS/PXE hooks)
 echo "-> Optimizing Initramfs..."
-CONF_FILE="$TARGET_DIR/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
+CONF_FILE="$BUILD_DIR/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
 if [ -f "$CONF_FILE" ]; then
     HOOKS_TO_REMOVE=("kms" "archiso_pxe_common" "archiso_pxe_nbd" "archiso_pxe_http" "archiso_pxe_nfs")
     for HOOK in "${HOOKS_TO_REMOVE[@]}"; do
@@ -43,7 +41,7 @@ fi
 
 # 5. Network & Desktop Configuration
 echo "-> Configuring Network & SDDM..."
-AIROOTFS_DIR="$TARGET_DIR/airootfs"
+AIROOTFS_DIR="$BUILD_DIR/airootfs"
 SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
 MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
 
@@ -81,8 +79,8 @@ mkdir -p "$AIROOTFS_DIR/etc/polkit-1/rules.d"
 # 7. Apply Custom Profile Definition
 echo "-> Overwriting profiledef.sh..."
 if [ -f "$CONFIG_DIR/profiledef.sh" ]; then
-    cp "$CONFIG_DIR/profiledef.sh" "$TARGET_DIR/profiledef.sh"
-    chmod +x "$TARGET_DIR/profiledef.sh"
+    cp "$CONFIG_DIR/profiledef.sh" "$BUILD_DIR/profiledef.sh"
+    chmod +x "$BUILD_DIR/profiledef.sh"
 else
     echo "::error::configs/profiledef.sh not found!"
     exit 1
