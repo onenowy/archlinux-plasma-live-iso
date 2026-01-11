@@ -87,7 +87,8 @@ echo "-> Configuring User & Permissions..."
 mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
 [ -f "$CONFIG_DIR/archiso-user.conf" ] && cp "$CONFIG_DIR/archiso-user.conf" "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
 
-mkdir -p "$AIROOTFS_DIR/home/arch"
+mkdir -p "$AIROOTFS_DIR/home/arch/.config"
+[ -f "$CONFIG_DIR/kwalletrc" ] && cp "$CONFIG_DIR/kwalletrc" "$AIROOTFS_DIR/home/arch/.config/kwalletrc"
 
 mkdir -p "$AIROOTFS_DIR/etc/sudoers.d"
 [ -f "$CONFIG_DIR/00-wheel-nopasswd" ] && cp "$CONFIG_DIR/00-wheel-nopasswd" "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd" && chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
