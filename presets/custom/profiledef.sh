@@ -29,4 +29,10 @@ file_permissions=(
   ["/home/arch"]="1000:1000:755"
   ["/home/arch/.config"]="1000:1000:755"
   ["/home/arch/.config/kwalletrc"]="1000:1000:644"
+  ["/home/arch/.config/kwinrc"]="1000:1000:644"
+  ["/home/arch/.config/kxkbrc"]="1000:1000:644"
+  ["/home/arch/.config/fcitx5"]="1000:1000:700"
+  ["/home/arch/.config/fcitx5/conf"]="1000:1000:700"
+  ["/home/arch/.config/fcitx5/profile"]="1000:1000:600"
+  ["/home/arch/.config/fcitx5/conf/hangul.conf"]="1000:1000:600"
 )

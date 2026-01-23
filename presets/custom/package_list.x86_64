@@ -16,6 +16,12 @@ starship
 
 # --- [Fonts] ---
 ttf-firacode-nerd
+noto-fonts-cjk
+noto-fonts-emoji
+
+# --- [Input Method] ---
+fcitx5-hangul
+fcitx5-configtool
 
 # --- [Hardware Support] ---
 intel-ucode

@@ -1,0 +1,7 @@
+[Layout]
+Options=korean:ralt_hangul,korean:rctrl_hanja
+ResetOldOptions=true
+LayoutList=us
+VariantList=
+DisplayNames=
+Use=true

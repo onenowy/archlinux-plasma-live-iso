@@ -100,6 +100,23 @@ if [ "${PRESET:-plasma}" != "console" ]; then
         mkdir -p "$AIROOTFS_DIR/home/arch/.config"
         cp "$PRESET_DIR/kwalletrc" "$AIROOTFS_DIR/home/arch/.config/kwalletrc"
     fi
+
+    # Fcitx5 Configuration (custom only)
+    if [ -d "$PRESET_DIR/fcitx5" ]; then
+        echo "-> Configuring Fcitx5..."
+        mkdir -p "$AIROOTFS_DIR/home/arch/.config/fcitx5/conf"
+        cp -r "$PRESET_DIR/fcitx5/"* "$AIROOTFS_DIR/home/arch/.config/fcitx5/"
+    fi
+
+    # KWin Configuration (for Wayland virtual keyboard / fcitx5)
+    if [ -f "$PRESET_DIR/kwinrc" ]; then
+        cp "$PRESET_DIR/kwinrc" "$AIROOTFS_DIR/home/arch/.config/kwinrc"
+    fi
+
+    # Keyboard Layout Configuration
+    if [ -f "$PRESET_DIR/kxkbrc" ]; then
+        cp "$PRESET_DIR/kxkbrc" "$AIROOTFS_DIR/home/arch/.config/kxkbrc"
+    fi
 fi
 
 
