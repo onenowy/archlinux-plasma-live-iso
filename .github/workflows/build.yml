@@ -12,21 +12,12 @@ on:
           - plasma
           - custom
           - console
-      action_type:
-        description: 'Action Type'
-        required: true
-        default: 'release'
-        type: choice
-        options:
-          - release
-          - artifact
   #schedule:
     #- cron: '0 0 * * *'
 
 # [OPTIMIZATION] Define paths globally to ensure scripts and YAML use the same paths
 env:
   PRESET: ${{ github.event.inputs.preset || 'plasma' }}
-  ACTION_TYPE: ${{ github.event.inputs.action_type || 'release' }}
   BUILD_DIR: "/tmp/archlive"       # Target directory where the profile is copied
   WORK_DIR: "/tmp/archiso-work"    # Working directory for mkarchiso
   OUT_DIR: "./out"                 # Output directory for the ISO
@@ -73,15 +64,6 @@ jobs:
           mkarchiso -v -w $WORK_DIR -o $OUT_DIR $BUILD_DIR
 
       - name: Create Release
-        if: env.ACTION_TYPE == 'release'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/create_release.sh
-
-      - name: Upload Artifact
-        if: env.ACTION_TYPE == 'artifact'
-        uses: actions/upload-artifact@v4
-        with:
-          name: archlinux-${{ env.PRESET }}-iso
-          path: ${{ env.OUT_DIR }}/*.iso
-          if-no-files-found: error
