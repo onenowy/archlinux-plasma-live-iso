@@ -74,25 +74,25 @@ rm -f "$AIROOTFS_DIR/etc/resolv.conf"
 mkdir -p "$MULTI_USER_DIR"
 ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
 
+# Firewalld Configuration (common for all presets)
+if [ -d "$PRESET_DIR/firewalld" ]; then
+    echo "-> Configuring Firewalld..."
+    mkdir -p "$AIROOTFS_DIR/etc/firewalld"
+    cp -r "$PRESET_DIR/firewalld/"* "$AIROOTFS_DIR/etc/firewalld/"
+    chmod -R u=rwX,g=rX,o=rX "$AIROOTFS_DIR/etc/firewalld"
+    ln -sf /usr/lib/systemd/system/firewalld.service "$MULTI_USER_DIR/firewalld.service"
+fi
+
 # Desktop Environment Setup (plasma, custom only)
 if [ "${PRESET:-plasma}" != "console" ]; then
     echo "-> Configuring Desktop Environment..."
     ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
     ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
-    ln -sf /usr/lib/systemd/system/firewalld.service "$MULTI_USER_DIR/firewalld.service"
 
     # Apply SDDM Autologin
     if [ -f "$PRESET_DIR/autologin.conf" ]; then
         mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
         cp "$PRESET_DIR/autologin.conf" "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
-    fi
-
-    # Firewalld Configuration
-    if [ -d "$PRESET_DIR/firewalld" ]; then
-        echo "-> Configuring Firewalld..."
-        mkdir -p "$AIROOTFS_DIR/etc/firewalld"
-        cp -r "$PRESET_DIR/firewalld/"* "$AIROOTFS_DIR/etc/firewalld/"
-        chmod -R u=rwX,g=rX,o=rX "$AIROOTFS_DIR/etc/firewalld"
     fi
 
     # KWallet Configuration
