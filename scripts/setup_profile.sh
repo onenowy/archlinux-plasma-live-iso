@@ -120,18 +120,24 @@ if [ "${PRESET:-plasma}" = "custom" ] || [ "${PRESET:-plasma}" = "console" ]; th
     fi
 fi
 
-# User Setup (Sysusers, Sudoers, Polkit)
-echo "-> Configuring User & Permissions..."
-mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
-[ -f "$PRESET_DIR/archiso-user.conf" ] && cp "$PRESET_DIR/archiso-user.conf" "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
+# User Setup (plasma, custom only - console uses root)
+if [ "${PRESET:-plasma}" != "console" ]; then
+    echo "-> Configuring User & Permissions..."
+    mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
+    [ -f "$PRESET_DIR/archiso-user.conf" ] && cp "$PRESET_DIR/archiso-user.conf" "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
 
-mkdir -p "$AIROOTFS_DIR/home/arch"
+    mkdir -p "$AIROOTFS_DIR/home/arch"
 
-mkdir -p "$AIROOTFS_DIR/etc/sudoers.d"
-[ -f "$PRESET_DIR/00-wheel-nopasswd" ] && cp "$PRESET_DIR/00-wheel-nopasswd" "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd" && chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
+    mkdir -p "$AIROOTFS_DIR/etc/sudoers.d"
+    [ -f "$PRESET_DIR/00-wheel-nopasswd" ] && cp "$PRESET_DIR/00-wheel-nopasswd" "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd" && chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
 
-mkdir -p "$AIROOTFS_DIR/etc/polkit-1/rules.d"
-[ -f "$PRESET_DIR/49-nopasswd_global.rules" ] && cp "$PRESET_DIR/49-nopasswd_global.rules" "$AIROOTFS_DIR/etc/polkit-1/rules.d/49-nopasswd_global.rules"
+    mkdir -p "$AIROOTFS_DIR/etc/polkit-1/rules.d"
+    [ -f "$PRESET_DIR/49-nopasswd_global.rules" ] && cp "$PRESET_DIR/49-nopasswd_global.rules" "$AIROOTFS_DIR/etc/polkit-1/rules.d/49-nopasswd_global.rules"
+else
+    # Console: Set root shell to zsh
+    echo "-> Configuring root shell to zsh..."
+    sed -i 's|^root:x:0:0:root:/root:/usr/bin/bash|root:x:0:0:root:/root:/usr/bin/zsh|' "$AIROOTFS_DIR/etc/passwd"
+fi
 
 # Apply Custom Profile Definition
 echo "-> Overwriting profiledef.sh..."
