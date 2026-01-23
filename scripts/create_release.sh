@@ -32,11 +32,30 @@ fi
 # Create Release & Upload
 echo "-> Creating release and uploading artifacts..."
 
-# Note: Adjust the --notes content as needed
+# Set title and notes based on release tag
+case "$RELEASE_TAG" in
+    *plasma*)
+        RELEASE_TITLE="Arch Linux Plasma ISO"
+        RELEASE_NOTES="Minimal KDE Plasma desktop environment with Wayland"
+        ;;
+    *custom*)
+        RELEASE_TITLE="Arch Linux Custom ISO"
+        RELEASE_NOTES="Custom KDE Plasma with zsh, starship, and additional tools"
+        ;;
+    *console*)
+        RELEASE_TITLE="Arch Linux Console ISO"
+        RELEASE_NOTES="Minimal console environment with zsh, starship, and kmscon"
+        ;;
+    *)
+        RELEASE_TITLE="Arch Linux ISO"
+        RELEASE_NOTES="Arch Linux Live ISO"
+        ;;
+esac
+
 gh release create "$RELEASE_TAG" "$OUT_DIR"/*.iso \
     --repo "$REPO" \
-    --title "Arch Plasma Build" \
-    --notes "Arch Linux Plasma ISO" \
+    --title "$RELEASE_TITLE" \
+    --notes "$RELEASE_NOTES" \
     --latest \
     --target "$SHA"
 
