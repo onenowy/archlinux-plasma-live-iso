@@ -1,0 +1,39 @@
+# Arch Linux Console Live ISO - Minimal Package List
+
+# --- [Boot & Base System] ---
+base
+linux
+efibootmgr
+dosfstools
+mkinitcpio
+mkinitcpio-archiso
+arch-install-scripts
+sudo
+
+# --- [Shell] ---
+zsh
+zsh-completions
+zsh-syntax-highlighting
+starship
+
+# --- [Fonts] ---
+ttf-firacode-nerd
+
+# --- [Hardware Support] ---
+intel-ucode
+amd-ucode
+linux-firmware
+
+# --- [CLI Utilities] ---
+nano
+less
+
+# --- [Filesystem Tools] ---
+ntfs-3g
+exfatprogs
+btrfs-progs
+xfsprogs
+
+# --- [Network] ---
+networkmanager
+openssh

@@ -1,16 +1,27 @@
-name: Arch Plasma ISO
+name: Arch Live ISO
 
 on:
   workflow_dispatch:
+    inputs:
+      preset:
+        description: 'Build preset'
+        required: true
+        default: 'plasma'
+        type: choice
+        options:
+          - plasma
+          - custom
+          - console
   #schedule:
     #- cron: '0 0 * * *'
 
 # [OPTIMIZATION] Define paths globally to ensure scripts and YAML use the same paths
 env:
+  PRESET: ${{ github.event.inputs.preset || 'plasma' }}
   BUILD_DIR: "/tmp/archlive"       # Target directory where the profile is copied
   WORK_DIR: "/tmp/archiso-work"    # Working directory for mkarchiso
   OUT_DIR: "./out"                 # Output directory for the ISO
-  RELEASE_TAG: "iso-build"         # Release tag name
+  RELEASE_TAG: "iso-build-${{ github.event.inputs.preset || 'plasma' }}"
 
 permissions:
   contents: write
@@ -42,8 +53,8 @@ jobs:
       - name: Make Scripts Executable
         run: chmod +x scripts/*.sh
 
-      # [CHANGED] Uses 'Custom' name and $BUILD_DIR env var
-      - name: Setup 'Custom' Profile
+      # Setup profile based on selected preset
+      - name: Setup '${{ github.event.inputs.preset || 'plasma' }}' Profile
         run: ./scripts/setup_profile.sh
 
       # Build ISO using defined Env Vars

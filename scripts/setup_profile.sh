@@ -2,10 +2,17 @@
 set -eu
 
 REPO_DIR=$(pwd)
-CONFIG_DIR="$REPO_DIR/configs"
+PRESET_DIR="$REPO_DIR/presets/${PRESET:-plasma}"
 
-echo ">>> Starting Custom Profile Setup..."
+echo ">>> Starting Profile Setup for preset: ${PRESET:-plasma}"
 echo "-> Working Target: $BUILD_DIR"
+echo "-> Preset Directory: $PRESET_DIR"
+
+# Validate preset exists
+if [ ! -d "$PRESET_DIR" ]; then
+    echo "::error::Preset directory not found: $PRESET_DIR"
+    exit 1
+fi
 
 # Copy Base Profile (releng)
 echo "-> Copying releng profile..."
@@ -13,11 +20,11 @@ cp -r /usr/share/archiso/configs/releng "$BUILD_DIR"
 chmod -R +w "$BUILD_DIR"
 
 # Apply Custom Packages
-if [ -f "$REPO_DIR/package_list.x86_64" ]; then
+if [ -f "$PRESET_DIR/package_list.x86_64" ]; then
     echo "-> Applying custom package list..."
-    sed 's/#.*//;s/[ \t]*$//;/^$/d' "$REPO_DIR/package_list.x86_64" > "$BUILD_DIR/packages.x86_64"
+    sed 's/#.*//;s/[ \t]*$//;/^$/d' "$PRESET_DIR/package_list.x86_64" > "$BUILD_DIR/packages.x86_64"
 else
-    echo "::error::package_list.x86_64 not found!"
+    echo "::error::package_list.x86_64 not found in preset!"
     exit 1
 fi
 
@@ -31,9 +38,11 @@ sed -i "s|^#NoExtract.*|${NO_EXTRACT_RULE}|" "$BUILD_DIR/pacman.conf"
 echo "-> Removing speech accessibility boot entries..."
 rm -f "$BUILD_DIR"/efiboot/loader/entries/*speech*.conf
 
-# Add custom boot entries (cowspace options)
-echo "-> Adding custom boot entries..."
-cp "$CONFIG_DIR"/efiboot/loader/entries/*.conf "$BUILD_DIR/efiboot/loader/entries/"
+# Add custom boot entries (if exists)
+if [ -d "$PRESET_DIR/efiboot/loader/entries" ]; then
+    echo "-> Adding custom boot entries..."
+    cp "$PRESET_DIR"/efiboot/loader/entries/*.conf "$BUILD_DIR/efiboot/loader/entries/"
+fi
 
 # Initramfs Optimization (Remove KMS/PXE hooks)
 echo "-> Optimizing Initramfs..."
@@ -47,13 +56,13 @@ if [ -f "$CONF_FILE" ]; then
     done
 fi
 
-# Network & Desktop Configuration
-echo "-> Configuring Network & SDDM..."
+# Common Setup
 AIROOTFS_DIR="$BUILD_DIR/airootfs"
 SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
 MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
 
-# Mask conflicting services
+# Network Configuration (common for all presets)
+echo "-> Configuring Network..."
 find "$SYSTEMD_DIR" -name "systemd-networkd.service" -delete
 find "$SYSTEMD_DIR" -name "systemd-resolved.service" -delete
 find "$SYSTEMD_DIR" -name "systemd-networkd.socket" -delete
@@ -62,48 +71,76 @@ ln -sf /dev/null "$SYSTEMD_DIR/systemd-resolved.service"
 ln -sf /dev/null "$SYSTEMD_DIR/systemd-networkd-wait-online.service"
 rm -f "$AIROOTFS_DIR/etc/resolv.conf"
 
-# Enable NetworkManager & SDDM
 mkdir -p "$MULTI_USER_DIR"
-ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
 ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
-ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
-ln -sf /usr/lib/systemd/system/firewalld.service "$MULTI_USER_DIR/firewalld.service"
 
-# Apply SDDM Autologin
-mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
-[ -f "$CONFIG_DIR/autologin.conf" ] && cp "$CONFIG_DIR/autologin.conf" "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
+# Desktop Environment Setup (plasma, custom only)
+if [ "${PRESET:-plasma}" != "console" ]; then
+    echo "-> Configuring Desktop Environment..."
+    ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
+    ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
+    ln -sf /usr/lib/systemd/system/firewalld.service "$MULTI_USER_DIR/firewalld.service"
 
-# Firewalld Configuration
-echo "-> Configuring Firewalld..."
-if [ -d "$CONFIG_DIR/firewalld" ]; then
-    mkdir -p "$AIROOTFS_DIR/etc/firewalld"
-    cp -r "$CONFIG_DIR/firewalld/"* "$AIROOTFS_DIR/etc/firewalld/"
-    # Ensure correct permissions
-    chmod -R u=rwX,g=rX,o=rX "$AIROOTFS_DIR/etc/firewalld"
+    # Apply SDDM Autologin
+    if [ -f "$PRESET_DIR/autologin.conf" ]; then
+        mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
+        cp "$PRESET_DIR/autologin.conf" "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
+    fi
+
+    # Firewalld Configuration
+    if [ -d "$PRESET_DIR/firewalld" ]; then
+        echo "-> Configuring Firewalld..."
+        mkdir -p "$AIROOTFS_DIR/etc/firewalld"
+        cp -r "$PRESET_DIR/firewalld/"* "$AIROOTFS_DIR/etc/firewalld/"
+        chmod -R u=rwX,g=rX,o=rX "$AIROOTFS_DIR/etc/firewalld"
+    fi
+
+    # KWallet Configuration
+    if [ -f "$PRESET_DIR/kwalletrc" ]; then
+        mkdir -p "$AIROOTFS_DIR/home/arch/.config"
+        cp "$PRESET_DIR/kwalletrc" "$AIROOTFS_DIR/home/arch/.config/kwalletrc"
+    fi
 fi
 
-# User Setup (Sysusers, Home, Sudoers, Polkit)
+# Console preset: enable services without GUI
+if [ "${PRESET:-plasma}" = "console" ]; then
+    echo "-> Configuring Console Environment..."
+    ln -sf /usr/lib/systemd/system/sshd.service "$MULTI_USER_DIR/sshd.service"
+fi
+
+# ZSH & Starship Configuration (custom, console only)
+if [ "${PRESET:-plasma}" = "custom" ] || [ "${PRESET:-plasma}" = "console" ]; then
+    echo "-> Configuring ZSH & Starship..."
+    if [ -d "$PRESET_DIR/zsh" ]; then
+        mkdir -p "$AIROOTFS_DIR/etc/zsh"
+        cp "$PRESET_DIR/zsh/"* "$AIROOTFS_DIR/etc/zsh/"
+    fi
+    if [ -f "$PRESET_DIR/starship.toml" ]; then
+        cp "$PRESET_DIR/starship.toml" "$AIROOTFS_DIR/etc/starship.toml"
+    fi
+fi
+
+# User Setup (Sysusers, Sudoers, Polkit)
 echo "-> Configuring User & Permissions..."
 mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
-[ -f "$CONFIG_DIR/archiso-user.conf" ] && cp "$CONFIG_DIR/archiso-user.conf" "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
+[ -f "$PRESET_DIR/archiso-user.conf" ] && cp "$PRESET_DIR/archiso-user.conf" "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
 
-mkdir -p "$AIROOTFS_DIR/home/arch/.config"
-[ -f "$CONFIG_DIR/kwalletrc" ] && cp "$CONFIG_DIR/kwalletrc" "$AIROOTFS_DIR/home/arch/.config/kwalletrc"
+mkdir -p "$AIROOTFS_DIR/home/arch"
 
 mkdir -p "$AIROOTFS_DIR/etc/sudoers.d"
-[ -f "$CONFIG_DIR/00-wheel-nopasswd" ] && cp "$CONFIG_DIR/00-wheel-nopasswd" "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd" && chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
+[ -f "$PRESET_DIR/00-wheel-nopasswd" ] && cp "$PRESET_DIR/00-wheel-nopasswd" "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd" && chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
 
 mkdir -p "$AIROOTFS_DIR/etc/polkit-1/rules.d"
-[ -f "$CONFIG_DIR/49-nopasswd_global.rules" ] && cp "$CONFIG_DIR/49-nopasswd_global.rules" "$AIROOTFS_DIR/etc/polkit-1/rules.d/49-nopasswd_global.rules"
+[ -f "$PRESET_DIR/49-nopasswd_global.rules" ] && cp "$PRESET_DIR/49-nopasswd_global.rules" "$AIROOTFS_DIR/etc/polkit-1/rules.d/49-nopasswd_global.rules"
 
 # Apply Custom Profile Definition
 echo "-> Overwriting profiledef.sh..."
-if [ -f "$CONFIG_DIR/profiledef.sh" ]; then
-    cp "$CONFIG_DIR/profiledef.sh" "$BUILD_DIR/profiledef.sh"
+if [ -f "$PRESET_DIR/profiledef.sh" ]; then
+    cp "$PRESET_DIR/profiledef.sh" "$BUILD_DIR/profiledef.sh"
     chmod +x "$BUILD_DIR/profiledef.sh"
 else
-    echo "::error::configs/profiledef.sh not found!"
+    echo "::error::profiledef.sh not found in preset!"
     exit 1
 fi
 
-echo ">>> Profile Setup Complete."
+echo ">>> Profile Setup Complete for preset: ${PRESET:-plasma}"
