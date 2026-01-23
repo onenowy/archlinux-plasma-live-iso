@@ -102,11 +102,6 @@ if [ "${PRESET:-plasma}" != "console" ]; then
     fi
 fi
 
-# Console preset: enable services without GUI
-if [ "${PRESET:-plasma}" = "console" ]; then
-    echo "-> Configuring Console Environment..."
-    ln -sf /usr/lib/systemd/system/sshd.service "$MULTI_USER_DIR/sshd.service"
-fi
 
 # ZSH & Starship Configuration (custom, console only)
 if [ "${PRESET:-plasma}" = "custom" ] || [ "${PRESET:-plasma}" = "console" ]; then
@@ -137,6 +132,17 @@ else
     # Console: Set root shell to zsh
     echo "-> Configuring root shell to zsh..."
     sed -i 's|^root:x:0:0:root:/root:/usr/bin/bash|root:x:0:0:root:/root:/usr/bin/zsh|' "$AIROOTFS_DIR/etc/passwd"
+
+    # Console: Configure kmscon for tty1
+    if [ -d "$PRESET_DIR/kmscon" ]; then
+        echo "-> Configuring kmscon..."
+        mkdir -p "$AIROOTFS_DIR/etc/kmscon"
+        cp "$PRESET_DIR/kmscon/"* "$AIROOTFS_DIR/etc/kmscon/"
+        # Disable default getty on tty1 and enable kmscon
+        mkdir -p "$SYSTEMD_DIR/getty.target.wants"
+        ln -sf /dev/null "$SYSTEMD_DIR/getty@tty1.service"
+        ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty1.service"
+    fi
 fi
 
 # Apply Custom Profile Definition

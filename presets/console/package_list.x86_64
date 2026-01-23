@@ -27,6 +27,7 @@ linux-firmware
 # --- [CLI Utilities] ---
 nano
 less
+kmscon
 
 # --- [Filesystem Tools] ---
 ntfs-3g
@@ -34,8 +35,11 @@ exfatprogs
 btrfs-progs
 xfsprogs
 
+# --- [Partition Tools] ---
+parted
+gptfdisk
+
 # --- [Network] ---
 networkmanager
-openssh
 iptables-nft
 firewalld
