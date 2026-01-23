@@ -133,7 +133,10 @@ else
     echo "-> Configuring root shell to zsh..."
     sed -i 's|^root:x:0:0:root:/root:/usr/bin/bash|root:x:0:0:root:/root:/usr/bin/zsh|' "$AIROOTFS_DIR/etc/passwd"
 
-    # Console: Configure kmscon for tty1
+    # Console: Remove archiso automated script (not needed for live environment)
+    rm -f "$AIROOTFS_DIR/root/.zlogin" "$AIROOTFS_DIR/root/.automated_script.sh"
+
+    # Console: Configure kmscon for tty1 with autologin
     if [ -d "$PRESET_DIR/kmscon" ]; then
         echo "-> Configuring kmscon..."
         mkdir -p "$AIROOTFS_DIR/etc/kmscon"
@@ -142,6 +145,11 @@ else
         mkdir -p "$SYSTEMD_DIR/getty.target.wants"
         ln -sf /dev/null "$SYSTEMD_DIR/getty@tty1.service"
         ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty1.service"
+        # Apply kmscon autologin override
+        if [ -f "$PRESET_DIR/systemd/kmsconvt-autologin.conf" ]; then
+            mkdir -p "$SYSTEMD_DIR/kmsconvt@tty1.service.d"
+            cp "$PRESET_DIR/systemd/kmsconvt-autologin.conf" "$SYSTEMD_DIR/kmsconvt@tty1.service.d/autologin.conf"
+        fi
     fi
 fi
 
