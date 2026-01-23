@@ -48,7 +48,7 @@ fi
 echo "-> Optimizing Initramfs..."
 CONF_FILE="$BUILD_DIR/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
 if [ -f "$CONF_FILE" ]; then
-    HOOKS_TO_REMOVE=("kms" "archiso_pxe_common" "archiso_pxe_nbd" "archiso_pxe_http" "archiso_pxe_nfs")
+    HOOKS_TO_REMOVE=("kms" "memdisk" "archiso_pxe_common" "archiso_pxe_nbd" "archiso_pxe_http" "archiso_pxe_nfs")
     for HOOK in "${HOOKS_TO_REMOVE[@]}"; do
         if grep -q "$HOOK" "$CONF_FILE"; then
             sed -i -E "s/\b$HOOK\b//g" "$CONF_FILE"

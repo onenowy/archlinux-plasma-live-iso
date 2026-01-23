@@ -60,4 +60,5 @@ alias ls="ls --color=auto -alh"
 
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
+export STARSHIP_CONFIG=/etc/starship.toml
 eval "$(starship init zsh)"
