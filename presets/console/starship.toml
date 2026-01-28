@@ -75,6 +75,7 @@ Pop = ""
 
 [sudo]
 disabled = false
+symbol = "# "
 style = "bg:color_orange fg:color_fg0"
 format = '[$symbol]($style)'
 allow_windows=true
