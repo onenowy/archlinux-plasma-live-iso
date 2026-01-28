@@ -18,6 +18,7 @@ starship
 
 # --- [Fonts] ---
 ttf-firacode-nerd
+noto-fonts-emoji
 
 # --- [Hardware Support] ---
 intel-ucode
