@@ -1,10 +1,11 @@
 #!/bin/bash
 set -eu
 
-REPO_DIR=$(pwd)
-PRESET_DIR="$REPO_DIR/presets/${PRESET:-plasma}"
+export REPO_DIR=$(pwd)
+export PRESET=${PRESET:-plasma}
+export PRESET_DIR="$REPO_DIR/presets/$PRESET"
 
-echo ">>> Starting Profile Setup for preset: ${PRESET:-plasma}"
+echo ">>> Starting Profile Setup for preset: $PRESET"
 echo "-> Working Target: $BUILD_DIR"
 echo "-> Preset Directory: $PRESET_DIR"
 
@@ -22,7 +23,7 @@ chmod -R +w "$BUILD_DIR"
 # Apply Custom Packages
 if [ -f "$PRESET_DIR/package_list.x86_64" ]; then
     echo "-> Applying custom package list..."
-    sed 's/#.*//;s/[ \t]*$//;/^$/d' "$PRESET_DIR/package_list.x86_64" > "$BUILD_DIR/packages.x86_64"
+    sed 's/#.*//;s/[ 	]*$//;/^$/d' "$PRESET_DIR/package_list.x86_64" > "$BUILD_DIR/packages.x86_64"
 else
     echo "::error::package_list.x86_64 not found in preset!"
     exit 1
@@ -56,10 +57,10 @@ if [ -f "$CONF_FILE" ]; then
     done
 fi
 
-# Common Setup
-AIROOTFS_DIR="$BUILD_DIR/airootfs"
-SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
-MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
+# Export common directories for preset scripts
+export AIROOTFS_DIR="$BUILD_DIR/airootfs"
+export SYSTEMD_DIR="$AIROOTFS_DIR/etc/systemd/system"
+export MULTI_USER_DIR="$SYSTEMD_DIR/multi-user.target.wants"
 
 # Network Configuration (common for all presets)
 echo "-> Configuring Network..."
@@ -74,7 +75,7 @@ rm -f "$AIROOTFS_DIR/etc/resolv.conf"
 mkdir -p "$MULTI_USER_DIR"
 ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
 
-# Firewalld Configuration (common for all presets)
+# Firewalld Configuration (if exists in preset)
 if [ -d "$PRESET_DIR/firewalld" ]; then
     echo "-> Configuring Firewalld..."
     mkdir -p "$AIROOTFS_DIR/etc/firewalld"
@@ -83,74 +84,12 @@ if [ -d "$PRESET_DIR/firewalld" ]; then
     ln -sf /usr/lib/systemd/system/firewalld.service "$MULTI_USER_DIR/firewalld.service"
 fi
 
-# Desktop Environment Setup (plasma, custom only)
-if [ "${PRESET:-plasma}" != "console" ]; then
-    echo "-> Configuring Desktop Environment..."
-    ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
-    ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
-
-    # Apply SDDM Autologin
-    if [ -f "$PRESET_DIR/autologin.conf" ]; then
-        mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
-        cp "$PRESET_DIR/autologin.conf" "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
-    fi
-
-    # KWallet Configuration
-    if [ -f "$PRESET_DIR/kwalletrc" ]; then
-        mkdir -p "$AIROOTFS_DIR/home/arch/.config"
-        cp "$PRESET_DIR/kwalletrc" "$AIROOTFS_DIR/home/arch/.config/kwalletrc"
-    fi
-fi
-
-
-# ZSH & Starship Configuration (custom, console only)
-if [ "${PRESET:-plasma}" = "custom" ] || [ "${PRESET:-plasma}" = "console" ]; then
-    echo "-> Configuring ZSH & Starship..."
-    if [ -d "$PRESET_DIR/zsh" ]; then
-        mkdir -p "$AIROOTFS_DIR/etc/zsh"
-        cp "$PRESET_DIR/zsh/"* "$AIROOTFS_DIR/etc/zsh/"
-    fi
-    if [ -f "$PRESET_DIR/starship.toml" ]; then
-        cp "$PRESET_DIR/starship.toml" "$AIROOTFS_DIR/etc/starship.toml"
-    fi
-fi
-
-# User Setup (plasma, custom only - console uses root)
-if [ "${PRESET:-plasma}" != "console" ]; then
-    echo "-> Configuring User & Permissions..."
-    mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
-    [ -f "$PRESET_DIR/archiso-user.conf" ] && cp "$PRESET_DIR/archiso-user.conf" "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
-
-    mkdir -p "$AIROOTFS_DIR/home/arch"
-
-    mkdir -p "$AIROOTFS_DIR/etc/sudoers.d"
-    [ -f "$PRESET_DIR/00-wheel-nopasswd" ] && cp "$PRESET_DIR/00-wheel-nopasswd" "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd" && chmod 440 "$AIROOTFS_DIR/etc/sudoers.d/00-wheel-nopasswd"
-
-    mkdir -p "$AIROOTFS_DIR/etc/polkit-1/rules.d"
-    [ -f "$PRESET_DIR/49-nopasswd_global.rules" ] && cp "$PRESET_DIR/49-nopasswd_global.rules" "$AIROOTFS_DIR/etc/polkit-1/rules.d/49-nopasswd_global.rules"
+# Run preset-specific setup
+if [ -f "$PRESET_DIR/setup.sh" ]; then
+    echo "-> Running preset-specific setup..."
+    source "$PRESET_DIR/setup.sh"
 else
-    # Console: Set root shell to zsh
-    echo "-> Configuring root shell to zsh..."
-    sed -i 's|^root:x:0:0:root:/root:/usr/bin/bash|root:x:0:0:root:/root:/usr/bin/zsh|' "$AIROOTFS_DIR/etc/passwd"
-
-    # Console: Remove archiso automated script (not needed for live environment)
-    rm -f "$AIROOTFS_DIR/root/.zlogin" "$AIROOTFS_DIR/root/.automated_script.sh"
-
-    # Console: Configure kmscon for tty1 with autologin
-    if [ -d "$PRESET_DIR/kmscon" ]; then
-        echo "-> Configuring kmscon..."
-        mkdir -p "$AIROOTFS_DIR/etc/kmscon"
-        cp "$PRESET_DIR/kmscon/"* "$AIROOTFS_DIR/etc/kmscon/"
-        # Disable default getty on tty1 and enable kmscon
-        mkdir -p "$SYSTEMD_DIR/getty.target.wants"
-        ln -sf /dev/null "$SYSTEMD_DIR/getty@tty1.service"
-        ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty1.service"
-        # Apply kmscon autologin override
-        if [ -f "$PRESET_DIR/systemd/kmsconvt-autologin.conf" ]; then
-            mkdir -p "$SYSTEMD_DIR/kmsconvt@tty1.service.d"
-            cp "$PRESET_DIR/systemd/kmsconvt-autologin.conf" "$SYSTEMD_DIR/kmsconvt@tty1.service.d/autologin.conf"
-        fi
-    fi
+    echo "::warning::No setup.sh found in preset, skipping preset-specific setup"
 fi
 
 # Apply Custom Profile Definition
@@ -163,4 +102,4 @@ else
     exit 1
 fi
 
-echo ">>> Profile Setup Complete for preset: ${PRESET:-plasma}"
+echo ">>> Profile Setup Complete for preset: $PRESET"
