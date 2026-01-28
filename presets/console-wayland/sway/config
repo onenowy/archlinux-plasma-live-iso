@@ -77,10 +77,10 @@ bindsym $mod+r mode "resize"
 # No window decorations
 default_border pixel 2
 
-# Disable status bar for minimal look
+# Minimal status bar
 bar {
     position bottom
-    status_command echo ""
+    status_command while date +'%Y-%m-%d %H:%M'; do sleep 60; done
     colors {
         background #282828
         statusline #ebdbb2
