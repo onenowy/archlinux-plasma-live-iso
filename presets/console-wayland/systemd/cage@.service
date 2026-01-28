@@ -1,0 +1,22 @@
+[Unit]
+Description=Cage Wayland Compositor on %I
+After=systemd-user-sessions.service plymouth-quit-wait.service
+After=getty@%i.service
+Wants=dbus.socket systemd-logind.service
+Conflicts=getty@%i.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/cage -s -- /usr/bin/foot -e /bin/login -f root
+Restart=always
+User=root
+PAMName=login
+TTYPath=/dev/%I
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Environment=XDG_RUNTIME_DIR=/run/user/0
+Environment=WLR_LIBINPUT_NO_DEVICES=1
+
+[Install]
+WantedBy=graphical.target

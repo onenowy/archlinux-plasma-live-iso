@@ -1,0 +1,53 @@
+# Arch Linux Console Wayland Live ISO - Minimal Package List
+
+# --- [Boot & Base System] ---
+base
+linux
+efibootmgr
+dosfstools
+mkinitcpio
+mkinitcpio-archiso
+arch-install-scripts
+sudo
+
+# --- [Shell] ---
+zsh
+zsh-completions
+zsh-syntax-highlighting
+starship
+
+# --- [Wayland Console] ---
+cage
+foot
+
+# --- [Input Method] ---
+fcitx5-hangul
+fcitx5-configtool
+
+# --- [Fonts] ---
+ttf-firacode-nerd
+noto-fonts-cjk
+
+# --- [Hardware Support] ---
+intel-ucode
+amd-ucode
+linux-firmware
+
+# --- [CLI Utilities] ---
+nano
+less
+
+# --- [Filesystem Tools] ---
+ntfs-3g
+exfatprogs
+btrfs-progs
+xfsprogs
+
+# --- [Partition Tools] ---
+parted
+gptfdisk
+
+# --- [Network] ---
+networkmanager
+iptables-nft
+firewalld

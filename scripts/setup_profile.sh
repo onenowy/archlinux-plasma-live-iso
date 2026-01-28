@@ -84,7 +84,7 @@ if [ -d "$PRESET_DIR/firewalld" ]; then
 fi
 
 # Desktop Environment Setup (plasma, custom only)
-if [ "${PRESET:-plasma}" != "console" ]; then
+if [ "${PRESET:-plasma}" != "console" ] && [ "${PRESET:-plasma}" != "console-wayland" ]; then
     echo "-> Configuring Desktop Environment..."
     ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
     ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
@@ -120,8 +120,8 @@ if [ "${PRESET:-plasma}" != "console" ]; then
 fi
 
 
-# ZSH & Starship Configuration (custom, console only)
-if [ "${PRESET:-plasma}" = "custom" ] || [ "${PRESET:-plasma}" = "console" ]; then
+# ZSH & Starship Configuration (custom, console, console-wayland)
+if [ "${PRESET:-plasma}" = "custom" ] || [ "${PRESET:-plasma}" = "console" ] || [ "${PRESET:-plasma}" = "console-wayland" ]; then
     echo "-> Configuring ZSH & Starship..."
     if [ -d "$PRESET_DIR/zsh" ]; then
         mkdir -p "$AIROOTFS_DIR/etc/zsh"
@@ -132,8 +132,8 @@ if [ "${PRESET:-plasma}" = "custom" ] || [ "${PRESET:-plasma}" = "console" ]; th
     fi
 fi
 
-# User Setup (plasma, custom only - console uses root)
-if [ "${PRESET:-plasma}" != "console" ]; then
+# User Setup (plasma, custom only - console/console-wayland uses root)
+if [ "${PRESET:-plasma}" != "console" ] && [ "${PRESET:-plasma}" != "console-wayland" ]; then
     echo "-> Configuring User & Permissions..."
     mkdir -p "$AIROOTFS_DIR/usr/lib/sysusers.d"
     [ -f "$PRESET_DIR/archiso-user.conf" ] && cp "$PRESET_DIR/archiso-user.conf" "$AIROOTFS_DIR/usr/lib/sysusers.d/archiso-user.conf"
@@ -154,7 +154,7 @@ else
     rm -f "$AIROOTFS_DIR/root/.zlogin" "$AIROOTFS_DIR/root/.automated_script.sh"
 
     # Console: Configure kmscon for tty1 with autologin
-    if [ -d "$PRESET_DIR/kmscon" ]; then
+    if [ "${PRESET:-plasma}" = "console" ] && [ -d "$PRESET_DIR/kmscon" ]; then
         echo "-> Configuring kmscon..."
         mkdir -p "$AIROOTFS_DIR/etc/kmscon"
         cp "$PRESET_DIR/kmscon/"* "$AIROOTFS_DIR/etc/kmscon/"
@@ -166,6 +166,31 @@ else
         if [ -f "$PRESET_DIR/systemd/kmsconvt-autologin.conf" ]; then
             mkdir -p "$SYSTEMD_DIR/kmsconvt@tty1.service.d"
             cp "$PRESET_DIR/systemd/kmsconvt-autologin.conf" "$SYSTEMD_DIR/kmsconvt@tty1.service.d/autologin.conf"
+        fi
+    fi
+
+    # Console-Wayland: Configure cage + foot with autologin
+    if [ "${PRESET:-plasma}" = "console-wayland" ]; then
+        echo "-> Configuring Cage + Foot..."
+        # Install cage service
+        if [ -f "$PRESET_DIR/systemd/cage@.service" ]; then
+            mkdir -p "$AIROOTFS_DIR/usr/lib/systemd/system"
+            cp "$PRESET_DIR/systemd/cage@.service" "$AIROOTFS_DIR/usr/lib/systemd/system/cage@.service"
+            # Enable cage on tty1
+            mkdir -p "$SYSTEMD_DIR/getty.target.wants"
+            ln -sf /dev/null "$SYSTEMD_DIR/getty@tty1.service"
+            ln -sf /usr/lib/systemd/system/cage@.service "$SYSTEMD_DIR/getty.target.wants/cage@tty1.service"
+        fi
+        # Foot configuration
+        if [ -f "$PRESET_DIR/foot.ini" ]; then
+            mkdir -p "$AIROOTFS_DIR/root/.config/foot"
+            cp "$PRESET_DIR/foot.ini" "$AIROOTFS_DIR/root/.config/foot/foot.ini"
+        fi
+        # Fcitx5 configuration for root
+        if [ -d "$PRESET_DIR/fcitx5" ]; then
+            echo "-> Configuring Fcitx5 for root..."
+            mkdir -p "$AIROOTFS_DIR/root/.config/fcitx5/conf"
+            cp -r "$PRESET_DIR/fcitx5/"* "$AIROOTFS_DIR/root/.config/fcitx5/"
         fi
     fi
 fi

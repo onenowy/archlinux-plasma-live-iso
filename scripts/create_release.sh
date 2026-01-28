@@ -42,6 +42,10 @@ case "$RELEASE_TAG" in
         RELEASE_TITLE="Arch Linux Custom ISO"
         RELEASE_NOTES="Custom KDE Plasma with zsh, starship, and additional tools"
         ;;
+    *console-wayland*)
+        RELEASE_TITLE="Arch Linux Console Wayland ISO"
+        RELEASE_NOTES="Minimal Wayland console environment with zsh, starship, and cage"
+        ;;
     *console*)
         RELEASE_TITLE="Arch Linux Console ISO"
         RELEASE_NOTES="Minimal console environment with zsh, starship, and kmscon"
