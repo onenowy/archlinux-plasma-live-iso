@@ -12,7 +12,6 @@ on:
           - plasma
           - custom
           - console
-          - console-wayland
   #schedule:
     #- cron: '0 0 * * *'
 
