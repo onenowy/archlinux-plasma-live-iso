@@ -13,11 +13,10 @@ setup_zsh_starship() {
     fi
 }
 
-# Desktop environment (SDDM + Bluetooth)
+# Desktop environment (SDDM)
 setup_desktop_env() {
     echo "-> Configuring Desktop Environment..."
     ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
-    ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
 
     if [ -f "$PRESET_DIR/autologin.conf" ]; then
         mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
@@ -73,6 +72,12 @@ setup_fcitx5() {
         mkdir -p "$home_dir/.config/fcitx5/conf"
         cp -r "$PRESET_DIR/fcitx5/"* "$home_dir/.config/fcitx5/"
     fi
+}
+
+# Bluetooth service
+setup_bluetooth() {
+    echo "-> Enabling Bluetooth..."
+    ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
 }
 
 # kmscon setup

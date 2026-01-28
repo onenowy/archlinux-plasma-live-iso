@@ -28,6 +28,17 @@ fcitx5-configtool
 ttf-firacode-nerd
 noto-fonts-cjk
 
+# --- [Audio] ---
+pipewire
+pipewire-audio
+pipewire-pulse
+wireplumber
+sof-firmware
+
+# --- [Bluetooth] ---
+bluez
+bluez-utils
+
 # --- [Hardware Support] ---
 intel-ucode
 amd-ucode
