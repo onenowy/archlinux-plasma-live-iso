@@ -41,5 +41,7 @@ gptfdisk
 
 # --- [Network] ---
 networkmanager
+bluez
+bluez-utils
 iptables-nft
 firewalld
