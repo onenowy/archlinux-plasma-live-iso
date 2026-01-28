@@ -1,34 +1,34 @@
-$schema = 'https://starship.rs/config-schema.json'
+"$schema" = 'https://starship.rs/config-schema.json'
 
 format = """
-[](color_orange)
-$os
-$username
-$sudo
-[](bg:color_yellow fg:color_orange)
-$directory
-[](fg:color_yellow bg:color_aqua)
-$git_branch
-$git_status
-[](fg:color_aqua bg:color_blue)
-$c
-$cpp
-$rust
-$golang
-$nodejs
-$php
-$java
-$kotlin
-$haskell
-$python
-[](fg:color_blue bg:color_bg3)
-$docker_context
-$conda
-$pixi
-[](fg:color_bg3 bg:color_bg1)
-$time
-$cmd_duration
-[ ](fg:color_bg1)
+[](color_orange)\
+$os\
+$username\
+$sudo\
+[](bg:color_yellow fg:color_orange)\
+$directory\
+[](fg:color_yellow bg:color_aqua)\
+$git_branch\
+$git_status\
+[](fg:color_aqua bg:color_blue)\
+$c\
+$cpp\
+$rust\
+$golang\
+$nodejs\
+$php\
+$java\
+$kotlin\
+$haskell\
+$python\
+[](fg:color_blue bg:color_bg3)\
+$docker_context\
+$conda\
+$pixi\
+[](fg:color_bg3 bg:color_bg1)\
+$time\
+$cmd_duration\
+[ ](fg:color_bg1)\
 $line_break$character"""
 
 palette = 'gruvbox_dark'
@@ -183,3 +183,5 @@ disabled = false
 min_time = 500
 style = "bg:color_bg1"
 format = '[[took $duration](fg:color_fg0 bg:color_bg1)]($style)'
+
+
