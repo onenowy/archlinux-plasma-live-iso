@@ -62,21 +62,16 @@ setup_kde_configs() {
     fi
 }
 
-# Fcitx5 for user
-setup_fcitx5_user() {
+# Fcitx5 configuration
+# Usage: setup_fcitx5 <home_dir>
+# Example: setup_fcitx5 "$AIROOTFS_DIR/home/arch"
+#          setup_fcitx5 "$AIROOTFS_DIR/root"
+setup_fcitx5() {
+    local home_dir="$1"
     if [ -d "$PRESET_DIR/fcitx5" ]; then
         echo "-> Configuring Fcitx5..."
-        mkdir -p "$AIROOTFS_DIR/home/arch/.config/fcitx5/conf"
-        cp -r "$PRESET_DIR/fcitx5/"* "$AIROOTFS_DIR/home/arch/.config/fcitx5/"
-    fi
-}
-
-# Fcitx5 for root
-setup_fcitx5_root() {
-    if [ -d "$PRESET_DIR/fcitx5" ]; then
-        echo "-> Configuring Fcitx5..."
-        mkdir -p "$AIROOTFS_DIR/root/.config/fcitx5/conf"
-        cp -r "$PRESET_DIR/fcitx5/"* "$AIROOTFS_DIR/root/.config/fcitx5/"
+        mkdir -p "$home_dir/.config/fcitx5/conf"
+        cp -r "$PRESET_DIR/fcitx5/"* "$home_dir/.config/fcitx5/"
     fi
 }
 

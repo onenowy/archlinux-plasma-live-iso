@@ -5,6 +5,6 @@ source "$REPO_DIR/scripts/setup_functions.sh"
 
 setup_desktop_env
 setup_kde_configs
-setup_fcitx5_user
+setup_fcitx5 "$AIROOTFS_DIR/home/arch"
 setup_zsh_starship
 setup_user
