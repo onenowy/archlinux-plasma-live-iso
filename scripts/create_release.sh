@@ -44,7 +44,7 @@ case "$RELEASE_TAG" in
         ;;
     *console-wayland*)
         RELEASE_TITLE="Arch Linux Console Wayland ISO"
-        RELEASE_NOTES="Minimal Wayland console environment with zsh, starship, and cage"
+        RELEASE_NOTES="Minimal Wayland console environment with zsh, starship, and sway"
         ;;
     *console*)
         RELEASE_TITLE="Arch Linux Console ISO"

@@ -1,5 +1,5 @@
 [Unit]
-Description=Cage Wayland Compositor on %I
+Description=Sway Wayland Compositor on %I
 After=systemd-user-sessions.service plymouth-quit-wait.service
 After=getty@%i.service
 Wants=dbus.socket systemd-logind.service
@@ -7,7 +7,7 @@ Conflicts=getty@%i.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/cage -s -- /usr/bin/foot -e /bin/login -f root
+ExecStart=/usr/bin/sway
 Restart=always
 User=root
 PAMName=login

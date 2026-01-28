@@ -17,7 +17,7 @@ zsh-syntax-highlighting
 starship
 
 # --- [Wayland Console] ---
-cage
+sway
 foot
 
 # --- [Input Method] ---

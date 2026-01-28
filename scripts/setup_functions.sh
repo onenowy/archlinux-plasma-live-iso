@@ -93,16 +93,21 @@ setup_kmscon() {
     fi
 }
 
-# Cage + Foot setup
-setup_cage_foot() {
-    echo "-> Configuring Cage + Foot..."
-    if [ -f "$PRESET_DIR/systemd/cage@.service" ]; then
+# Sway + Foot setup
+setup_sway_foot() {
+    echo "-> Configuring Sway + Foot..."
+    if [ -f "$PRESET_DIR/systemd/sway@.service" ]; then
         mkdir -p "$AIROOTFS_DIR/usr/lib/systemd/system"
-        cp "$PRESET_DIR/systemd/cage@.service" "$AIROOTFS_DIR/usr/lib/systemd/system/cage@.service"
+        cp "$PRESET_DIR/systemd/sway@.service" "$AIROOTFS_DIR/usr/lib/systemd/system/sway@.service"
 
         mkdir -p "$SYSTEMD_DIR/getty.target.wants"
         ln -sf /dev/null "$SYSTEMD_DIR/getty@tty1.service"
-        ln -sf /usr/lib/systemd/system/cage@.service "$SYSTEMD_DIR/getty.target.wants/cage@tty1.service"
+        ln -sf /usr/lib/systemd/system/sway@.service "$SYSTEMD_DIR/getty.target.wants/sway@tty1.service"
+    fi
+
+    if [ -d "$PRESET_DIR/sway" ]; then
+        mkdir -p "$AIROOTFS_DIR/root/.config/sway"
+        cp "$PRESET_DIR/sway/"* "$AIROOTFS_DIR/root/.config/sway/"
     fi
 
     if [ -f "$PRESET_DIR/foot.ini" ]; then
