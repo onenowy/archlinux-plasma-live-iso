@@ -10,7 +10,6 @@ on:
         type: choice
         options:
           - plasma
-          - custom
           - console
   #schedule:
     #- cron: '0 0 * * *'
