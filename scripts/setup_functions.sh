@@ -43,7 +43,6 @@ setup_user() {
 setup_root_console() {
     echo "-> Configuring root for console..."
     sed -i 's|^root:x:0:0:root:/root:/usr/bin/bash|root:x:0:0:root:/root:/usr/bin/zsh|' "$AIROOTFS_DIR/etc/passwd"
-    rm -f "$AIROOTFS_DIR/root/.zlogin" "$AIROOTFS_DIR/root/.automated_script.sh"
 }
 
 # KDE configs (kwallet, kwin, kxkb)

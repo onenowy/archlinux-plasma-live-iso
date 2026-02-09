@@ -26,6 +26,7 @@ file_permissions=(
   ["/etc/shadow"]="0:0:400"
   ["/root"]="0:0:750"
   ["/root/.gnupg"]="0:0:700"
+  ["/root/.automated_script.sh"]="0:0:755"
   ["/home/arch"]="1000:1000:755"
   ["/home/arch/.config"]="1000:1000:755"
   ["/home/arch/.config/kwalletrc"]="1000:1000:644"
