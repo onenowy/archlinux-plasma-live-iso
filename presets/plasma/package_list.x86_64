@@ -17,7 +17,7 @@ sof-firmware
 
 # --- [Desktop Environment - Minimal] ---
 plasma-desktop
-sddm
+plasma-login-manager
 powerdevil
 kscreen
 breeze-gtk

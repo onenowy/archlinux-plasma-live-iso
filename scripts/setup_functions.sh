@@ -13,14 +13,14 @@ setup_zsh_starship() {
     fi
 }
 
-# Desktop environment (SDDM)
+# Desktop environment (Plasma Login Manager)
 setup_desktop_env() {
     echo "-> Configuring Desktop Environment..."
-    ln -sf /usr/lib/systemd/system/sddm.service "$SYSTEMD_DIR/display-manager.service"
+    ln -sf /usr/lib/systemd/system/plasmalogin.service "$SYSTEMD_DIR/display-manager.service"
 
     if [ -f "$PRESET_DIR/autologin.conf" ]; then
-        mkdir -p "$AIROOTFS_DIR/etc/sddm.conf.d"
-        cp "$PRESET_DIR/autologin.conf" "$AIROOTFS_DIR/etc/sddm.conf.d/autologin.conf"
+        mkdir -p "$AIROOTFS_DIR/etc/plasmalogin.conf.d"
+        cp "$PRESET_DIR/autologin.conf" "$AIROOTFS_DIR/etc/plasmalogin.conf.d/autologin.conf"
     fi
 }
 
