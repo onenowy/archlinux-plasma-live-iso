@@ -27,7 +27,6 @@ xdg-user-dirs
 # --- [Network & Bluetooth GUI] ---
 plasma-nm
 bluedevil
-iptables-nft
 firewalld
 
 # --- [Audio GUI] ---

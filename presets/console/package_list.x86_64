@@ -43,5 +43,4 @@ gptfdisk
 networkmanager
 bluez
 bluez-utils
-iptables-nft
 firewalld
