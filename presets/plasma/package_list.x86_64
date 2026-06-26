@@ -70,6 +70,7 @@ xfsprogs
 
 # --- [CLI Utilities] ---
 nano
+kmscon
 
 # --- [Partition Tools] ---
 parted

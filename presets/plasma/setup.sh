@@ -8,3 +8,5 @@ setup_bluetooth
 setup_kde_configs
 setup_zsh_starship
 setup_user
+setup_kmscon
+

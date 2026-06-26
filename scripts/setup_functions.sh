@@ -80,12 +80,25 @@ setup_kmscon() {
         cp "$PRESET_DIR/kmscon/"* "$AIROOTFS_DIR/etc/kmscon/"
 
         mkdir -p "$SYSTEMD_DIR/getty.target.wants"
+
+        # Enable kmscon on tty1
         ln -sf /dev/null "$SYSTEMD_DIR/getty@tty1.service"
         ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty1.service"
 
         if [ -f "$PRESET_DIR/systemd/kmsconvt-autologin.conf" ]; then
             mkdir -p "$SYSTEMD_DIR/kmsconvt@tty1.service.d"
             cp "$PRESET_DIR/systemd/kmsconvt-autologin.conf" "$SYSTEMD_DIR/kmsconvt@tty1.service.d/autologin.conf"
+        fi
+
+        # If display manager is used, ensure it conflicts with and runs after kmsconvt@tty1.service
+        if [ "$PRESET" = "plasma" ]; then
+            echo "-> Configuring display manager to conflict with and run after kmsconvt@tty1.service..."
+            mkdir -p "$SYSTEMD_DIR/plasmalogin.service.d"
+            cat <<EOF > "$SYSTEMD_DIR/plasmalogin.service.d/override.conf"
+[Unit]
+Conflicts=kmsconvt@tty1.service
+After=kmsconvt@tty1.service
+EOF
         fi
     fi
 }
