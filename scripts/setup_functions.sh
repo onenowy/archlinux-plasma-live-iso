@@ -85,6 +85,9 @@ setup_kmscon() {
         ln -sf /dev/null "$SYSTEMD_DIR/getty@tty1.service"
         ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty1.service"
 
+        # Enable kmscon for dynamically allocated VTs (tty2-6)
+        ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/autovt@.service"
+
         if [ -f "$PRESET_DIR/systemd/kmsconvt-autologin.conf" ]; then
             mkdir -p "$SYSTEMD_DIR/kmsconvt@tty1.service.d"
             cp "$PRESET_DIR/systemd/kmsconvt-autologin.conf" "$SYSTEMD_DIR/kmsconvt@tty1.service.d/autologin.conf"
