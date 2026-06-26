@@ -7,7 +7,18 @@ mkinitcpio
 mkinitcpio-archiso
 arch-install-scripts
 sudo
-bash-completion
+
+# --- [Shell] ---
+zsh
+zsh-completions
+zsh-syntax-highlighting
+starship
+
+# --- [Fonts] ---
+ttf-firacode-nerd
+noto-fonts-cjk
+noto-fonts-emoji
+
 
 # --- [Hardware Support] ---
 intel-ucode
