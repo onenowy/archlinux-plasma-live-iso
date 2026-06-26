@@ -39,12 +39,6 @@ sed -i "s|^#NoExtract.*|${NO_EXTRACT_RULE}|" "$BUILD_DIR/pacman.conf"
 echo "-> Removing speech accessibility boot entries..."
 rm -f "$BUILD_DIR"/efiboot/loader/entries/*speech*.conf
 
-# Disable GRUB menu sound/beep
-if [ -d "$BUILD_DIR/grub" ]; then
-    echo "-> Disabling GRUB menu sound..."
-    find "$BUILD_DIR/grub" -type f -name "*.cfg" -exec sed -i 's/^\s*play /# play /g' {} +
-fi
-
 # Add custom boot entries (if exists)
 if [ -d "$PRESET_DIR/efiboot/loader/entries" ]; then
     echo "-> Adding custom boot entries..."
