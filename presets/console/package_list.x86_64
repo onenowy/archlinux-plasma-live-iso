@@ -28,6 +28,7 @@ linux-firmware
 nano
 less
 kmscon
+pango
 
 # --- [Filesystem Tools] ---
 ntfs-3g
