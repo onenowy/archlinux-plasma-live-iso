@@ -49,7 +49,7 @@ case "$RELEASE_TAG" in
         ;;
 esac
 
-GH_DEBUG=api gh release create "$RELEASE_TAG" "$OUT_DIR"/*.iso \
+gh release create "$RELEASE_TAG" "$OUT_DIR"/*.iso \
     --repo "$REPO" \
     --title "$RELEASE_TITLE" \
     --notes "$RELEASE_NOTES" \
