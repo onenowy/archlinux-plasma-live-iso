@@ -10,7 +10,8 @@ SHA="$GITHUB_SHA"           # Automatically provided by Actions
 # Check & Delete Previous Release
 if gh release view "$RELEASE_TAG" --repo "$REPO" > /dev/null 2>&1; then
     echo "-> Deleting existing '$RELEASE_TAG' release..."
-    gh release delete "$RELEASE_TAG" --yes --cleanup-tag --repo "$REPO"
+    gh release delete "$RELEASE_TAG" --yes --cleanup-tag --repo "$REPO" || \
+    gh release delete "$RELEASE_TAG" --yes --repo "$REPO" || true
 else
     echo "-> No existing release found. Creating a new one."
 fi
