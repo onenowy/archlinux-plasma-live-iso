@@ -42,7 +42,13 @@ setup_user() {
 # Root console setup (zsh shell, remove automated scripts)
 setup_root_console() {
     echo "-> Configuring root for console..."
-    sed -i 's|^root:x:0:0:root:/root:/usr/bin/bash|root:x:0:0:root:/root:/usr/bin/zsh|' "$AIROOTFS_DIR/etc/passwd"
+    sed -i -E 's|^(root:x:0:0:root:/root:)(/usr)?/bin/bash|\1/usr/bin/zsh|' "$AIROOTFS_DIR/etc/passwd"
+
+    # Copy PAM configurations if they exist in the preset
+    if [ -d "$PRESET_DIR/pam.d" ]; then
+        mkdir -p "$AIROOTFS_DIR/etc/pam.d"
+        cp -r "$PRESET_DIR/pam.d/"* "$AIROOTFS_DIR/etc/pam.d/"
+    fi
 }
 
 # KDE configs (kwallet, kwin, kxkb)
