@@ -28,6 +28,7 @@ xdg-user-dirs
 plasma-nm
 bluedevil
 firewalld
+iptables
 
 # --- [Audio GUI] ---
 plasma-pa
