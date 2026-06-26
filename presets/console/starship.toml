@@ -16,6 +16,7 @@ $cpp\
 $rust\
 $golang\
 $nodejs\
+$bun\
 $php\
 $java\
 $kotlin\
@@ -113,6 +114,11 @@ symbol = ""
 style = "bg:color_blue"
 format = '[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)'
 
+[bun]
+symbol = ""
+style = "bg:color_blue"
+format = '[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)'
+
 [c]
 symbol = " "
 style = "bg:color_blue"
@@ -173,7 +179,6 @@ format = '[[ $symbol( $version)( $environment) ](fg:color_fg0 bg:color_bg3)]($st
 
 [time]
 disabled = false
-use_12hr = true
 style = "bg:color_bg1"
 format = '[[  $time ](fg:color_fg0 bg:color_bg1)]($style)'
 
@@ -184,5 +189,3 @@ disabled = false
 min_time = 500
 style = "bg:color_bg1"
 format = '[[took $duration](fg:color_fg0 bg:color_bg1)]($style)'
-
-
