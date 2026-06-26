@@ -24,5 +24,4 @@ file_permissions=(
   ["/root"]="0:0:750"
   ["/root/.gnupg"]="0:0:700"
   ["/root/.automated_script.sh"]="0:0:755"
-  ["/etc/pam.d/login"]="0:0:644"
 )
