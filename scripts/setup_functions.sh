@@ -81,9 +81,11 @@ setup_kmscon() {
 
         mkdir -p "$SYSTEMD_DIR/getty.target.wants"
 
-        # Enable kmscon on tty1
-        ln -sf /dev/null "$SYSTEMD_DIR/getty@tty1.service"
-        ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty1.service"
+        # Enable kmscon on tty1-6, and mask getty on tty1-6
+        for i in {1..6}; do
+            ln -sf /dev/null "$SYSTEMD_DIR/getty@tty${i}.service"
+            ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty${i}.service"
+        done
 
         # Enable kmscon for dynamically allocated VTs (tty2-6)
         ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/autovt@.service"
