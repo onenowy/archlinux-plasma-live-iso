@@ -12,6 +12,7 @@ sudo
 zsh
 zsh-completions
 zsh-syntax-highlighting
+zsh-history-substring-search
 starship
 
 # --- [Fonts] ---
