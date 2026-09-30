@@ -1,6 +1,7 @@
 # 1. Environment variables and PATH deduplication
 typeset -U PATH path
 export PATH="$HOME/.local/bin:$PATH"
+export STARSHIP_CONFIG=/etc/starship.toml
 
 # 2. Optimize compinit loading speed (rebuild dump file once per day)
 setopt EXTENDED_GLOB
