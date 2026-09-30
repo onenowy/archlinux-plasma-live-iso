@@ -81,9 +81,10 @@ setup_kmscon() {
 
         mkdir -p "$SYSTEMD_DIR/getty.target.wants"
 
-        # Enable kmscon on tty1-6, and mask getty on tty1-6
+        # Enable kmscon on tty1-6, preserving getty as a failure fallback
         for i in {1..6}; do
-            ln -sf /dev/null "$SYSTEMD_DIR/getty@tty${i}.service"
+            rm -f "$SYSTEMD_DIR/getty@tty${i}.service"
+            rm -f "$SYSTEMD_DIR/getty.target.wants/getty@tty${i}.service"
             ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty${i}.service"
         done
 

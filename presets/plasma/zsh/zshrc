@@ -3,6 +3,7 @@ typeset -U PATH path
 export PATH="$HOME/.local/bin:$PATH"
 
 # 2. Optimize compinit loading speed (rebuild dump file once per day)
+setopt EXTENDED_GLOB
 autoload -Uz compinit
 if [[ -n ~/.zcompdump(#qN.m+1) ]]; then
   compinit
