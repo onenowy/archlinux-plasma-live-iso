@@ -1,16 +1,12 @@
 #!/bin/bash
 # Shared setup functions for presets
 
-# ZSH & Starship configuration
+# ZSH & Starship configuration (shared by all presets)
 setup_zsh_starship() {
     echo "-> Configuring ZSH & Starship..."
-    if [ -d "$PRESET_DIR/zsh" ]; then
-        mkdir -p "$AIROOTFS_DIR/etc/zsh"
-        cp "$PRESET_DIR/zsh/"* "$AIROOTFS_DIR/etc/zsh/"
-    fi
-    if [ -f "$PRESET_DIR/starship.toml" ]; then
-        cp "$PRESET_DIR/starship.toml" "$AIROOTFS_DIR/etc/starship.toml"
-    fi
+    mkdir -p "$AIROOTFS_DIR/etc/zsh"
+    cp "$COMMON_DIR/zsh/"* "$AIROOTFS_DIR/etc/zsh/"
+    cp "$COMMON_DIR/starship.toml" "$AIROOTFS_DIR/etc/starship.toml"
 }
 
 # Desktop environment (Plasma Login Manager)
@@ -39,30 +35,12 @@ setup_user() {
     [ -f "$PRESET_DIR/49-nopasswd_global.rules" ] && cp "$PRESET_DIR/49-nopasswd_global.rules" "$AIROOTFS_DIR/etc/polkit-1/rules.d/49-nopasswd_global.rules"
 }
 
-# Root console setup (zsh shell, remove automated scripts)
-setup_root_console() {
-    echo "-> Configuring root for console..."
-    sed -i -E 's|^(root:x:0:0:root:/root:)(/usr)?/bin/bash|\1/usr/bin/zsh|' "$AIROOTFS_DIR/etc/passwd"
-
-    # Copy PAM configurations if they exist in the preset
-    if [ -d "$PRESET_DIR/pam.d" ]; then
-        mkdir -p "$AIROOTFS_DIR/etc/pam.d"
-        cp -r "$PRESET_DIR/pam.d/"* "$AIROOTFS_DIR/etc/pam.d/"
-    fi
-}
-
-# KDE configs (kwallet, kwin, kxkb)
+# KDE configs (kwallet)
 setup_kde_configs() {
     mkdir -p "$AIROOTFS_DIR/home/arch/.config"
 
     if [ -f "$PRESET_DIR/kwalletrc" ]; then
         cp "$PRESET_DIR/kwalletrc" "$AIROOTFS_DIR/home/arch/.config/kwalletrc"
-    fi
-    if [ -f "$PRESET_DIR/kwinrc" ]; then
-        cp "$PRESET_DIR/kwinrc" "$AIROOTFS_DIR/home/arch/.config/kwinrc"
-    fi
-    if [ -f "$PRESET_DIR/kxkbrc" ]; then
-        cp "$PRESET_DIR/kxkbrc" "$AIROOTFS_DIR/home/arch/.config/kxkbrc"
     fi
 }
 
@@ -72,39 +50,29 @@ setup_bluetooth() {
     ln -sf /usr/lib/systemd/system/bluetooth.service "$MULTI_USER_DIR/bluetooth.service"
 }
 
-# kmscon setup
+# kmscon setup (shared config from common/)
+# $1 (optional): command kmscon starts instead of the default /bin/login,
+#                e.g. "/usr/bin/zsh --login" for a root shell without a login prompt
 setup_kmscon() {
-    if [ -d "$PRESET_DIR/kmscon" ]; then
-        echo "-> Configuring kmscon..."
-        mkdir -p "$AIROOTFS_DIR/etc/kmscon"
-        cp "$PRESET_DIR/kmscon/"* "$AIROOTFS_DIR/etc/kmscon/"
+    local login_cmd="${1:-}"
 
-        mkdir -p "$SYSTEMD_DIR/getty.target.wants"
-
-        # Enable kmscon on tty1-6, preserving getty as a failure fallback
-        for i in {1..6}; do
-            rm -f "$SYSTEMD_DIR/getty@tty${i}.service"
-            rm -f "$SYSTEMD_DIR/getty.target.wants/getty@tty${i}.service"
-            ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty${i}.service"
-        done
-
-        # Enable kmscon for dynamically allocated VTs (tty2-6)
-        ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/autovt@.service"
-
-        if [ -f "$PRESET_DIR/systemd/kmsconvt-autologin.conf" ]; then
-            mkdir -p "$SYSTEMD_DIR/kmsconvt@tty1.service.d"
-            cp "$PRESET_DIR/systemd/kmsconvt-autologin.conf" "$SYSTEMD_DIR/kmsconvt@tty1.service.d/autologin.conf"
-        fi
-
-        # If display manager is used, ensure it conflicts with and runs after kmsconvt@tty1.service
-        if [ "$PRESET" = "plasma" ]; then
-            echo "-> Configuring display manager to conflict with and run after kmsconvt@tty1.service..."
-            mkdir -p "$SYSTEMD_DIR/plasmalogin.service.d"
-            cat <<EOF > "$SYSTEMD_DIR/plasmalogin.service.d/override.conf"
-[Unit]
-Conflicts=kmsconvt@tty1.service
-After=kmsconvt@tty1.service
-EOF
-        fi
+    echo "-> Configuring kmscon..."
+    mkdir -p "$AIROOTFS_DIR/etc/kmscon"
+    cp "$COMMON_DIR/kmscon/"* "$AIROOTFS_DIR/etc/kmscon/"
+    if [ -n "$login_cmd" ]; then
+        printf '\nlogin=%s\n' "$login_cmd" >> "$AIROOTFS_DIR/etc/kmscon/kmscon.conf"
     fi
+
+    # Enable kmscon on tty1-6. kmsconvt@ conflicts with getty@ on the same VT
+    # and starts it as a fallback if kmscon fails.
+    mkdir -p "$SYSTEMD_DIR/getty.target.wants"
+    for i in {1..6}; do
+        ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty${i}.service"
+    done
+
+    # Use kmscon for dynamically allocated VTs as well
+    ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/autovt@.service"
+
+    # plasmalogin.service already ships Conflicts=/After=kmsconvt@tty1.service,
+    # so no drop-in is needed for the display manager.
 }

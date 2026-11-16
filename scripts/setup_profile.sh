@@ -4,6 +4,7 @@ set -eu
 export REPO_DIR=$(pwd)
 export PRESET=${PRESET:-plasma}
 export PRESET_DIR="$REPO_DIR/presets/$PRESET"
+export COMMON_DIR="$REPO_DIR/common"   # Files shared by all presets
 
 echo ">>> Starting Profile Setup for preset: $PRESET"
 echo "-> Working Target: $BUILD_DIR"
@@ -39,17 +40,18 @@ sed -i "s|^#NoExtract.*|${NO_EXTRACT_RULE}|" "$BUILD_DIR/pacman.conf"
 echo "-> Removing speech accessibility boot entries..."
 rm -f "$BUILD_DIR"/efiboot/loader/entries/*speech*.conf
 
-# Add custom boot entries (if exists)
-if [ -d "$PRESET_DIR/efiboot/loader/entries" ]; then
-    echo "-> Adding custom boot entries..."
-    cp "$PRESET_DIR"/efiboot/loader/entries/*.conf "$BUILD_DIR/efiboot/loader/entries/"
-fi
+# Add custom boot entries (shared by all presets)
+echo "-> Adding custom boot entries..."
+cp "$COMMON_DIR"/efiboot/loader/entries/*.conf "$BUILD_DIR/efiboot/loader/entries/"
 
-# Initramfs Optimization (Remove KMS/PXE hooks)
+# Remove the releng motd (it points at iwctl/mmcli/Installation_guide, which are not installed)
+rm -f "$BUILD_DIR/airootfs/etc/motd"
+
+# Initramfs Optimization (Remove memdisk/PXE hooks)
 echo "-> Optimizing Initramfs..."
 CONF_FILE="$BUILD_DIR/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
 if [ -f "$CONF_FILE" ]; then
-    HOOKS_TO_REMOVE=("kms" "memdisk" "archiso_pxe_common" "archiso_pxe_nbd" "archiso_pxe_http" "archiso_pxe_nfs")
+    HOOKS_TO_REMOVE=("memdisk" "archiso_pxe_common" "archiso_pxe_nbd" "archiso_pxe_http" "archiso_pxe_nfs")
     for HOOK in "${HOOKS_TO_REMOVE[@]}"; do
         if grep -q "$HOOK" "$CONF_FILE"; then
             sed -i -E "s/\b$HOOK\b//g" "$CONF_FILE"
@@ -75,14 +77,12 @@ rm -f "$AIROOTFS_DIR/etc/resolv.conf"
 mkdir -p "$MULTI_USER_DIR"
 ln -sf /usr/lib/systemd/system/NetworkManager.service "$MULTI_USER_DIR/NetworkManager.service"
 
-# Firewalld Configuration (if exists in preset)
-if [ -d "$PRESET_DIR/firewalld" ]; then
-    echo "-> Configuring Firewalld..."
-    mkdir -p "$AIROOTFS_DIR/etc/firewalld"
-    cp -r "$PRESET_DIR/firewalld/"* "$AIROOTFS_DIR/etc/firewalld/"
-    chmod -R u=rwX,g=rX,o=rX "$AIROOTFS_DIR/etc/firewalld"
-    ln -sf /usr/lib/systemd/system/firewalld.service "$MULTI_USER_DIR/firewalld.service"
-fi
+# Firewalld Configuration (shared by all presets)
+echo "-> Configuring Firewalld..."
+mkdir -p "$AIROOTFS_DIR/etc/firewalld"
+cp -r "$COMMON_DIR/firewalld/"* "$AIROOTFS_DIR/etc/firewalld/"
+chmod -R u=rwX,g=rX,o=rX "$AIROOTFS_DIR/etc/firewalld"
+ln -sf /usr/lib/systemd/system/firewalld.service "$MULTI_USER_DIR/firewalld.service"
 
 # Run preset-specific setup
 if [ -f "$PRESET_DIR/setup.sh" ]; then

@@ -12,7 +12,7 @@ bootmodes=('uefi.systemd-boot')
 pacman_conf="pacman.conf"
 
 # [EROFS Configuration]
-# -zlzma,6: LZMA compression level 6 (Max compression)
+# -zlzma,6: LZMA compression level 6 (levels go up to 9)
 # -C 1048576: 1MB Pcluster size
 # -E ...: Enable ztailpacking, merge all fragments, inode-based deduplication
 airootfs_image_type="erofs"
