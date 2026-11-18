@@ -11,9 +11,9 @@ buildmodes=('iso')
 bootmodes=('uefi.systemd-boot')
 pacman_conf="pacman.conf"
 
-# [EROFS Configuration]
+# [EROFS Configuration] (zstd level 15; see the plasma preset for why)
 airootfs_image_type="erofs"
-airootfs_image_tool_options=('-zlzma,6' '-C' '1048576' '-E' 'ztailpacking,all-fragments,fragdedupe=inode')
+airootfs_image_tool_options=('-zzstd,level=15' '-C' '1048576' '-E' 'ztailpacking,all-fragments,fragdedupe=inode')
 
 # Bootstrap compression settings
 bootstrap_tarball_compression=('zstd' '-c' '-T0' '--auto-threads=logical' '--long' '-19')

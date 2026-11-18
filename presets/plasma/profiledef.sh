@@ -12,11 +12,14 @@ bootmodes=('uefi.systemd-boot')
 pacman_conf="pacman.conf"
 
 # [EROFS Configuration]
-# -zlzma,6: LZMA compression level 6 (levels go up to 9)
+# -zzstd,level=15: zstd level 15. About 10% bigger than LZMA, but compresses
+#   about 2x faster and decompresses about 9x faster. Higher zstd levels save
+#   ~1.5% for ~6x the build time; LZMA levels above 6 gain nothing with 1 MiB
+#   pclusters, since the larger dictionaries never fit in one pcluster.
 # -C 1048576: 1MB Pcluster size
 # -E ...: Enable ztailpacking, merge all fragments, inode-based deduplication
 airootfs_image_type="erofs"
-airootfs_image_tool_options=('-zlzma,6' '-C' '1048576' '-E' 'ztailpacking,all-fragments,fragdedupe=inode')
+airootfs_image_tool_options=('-zzstd,level=15' '-C' '1048576' '-E' 'ztailpacking,all-fragments,fragdedupe=inode')
 
 # Bootstrap compression settings
 bootstrap_tarball_compression=('zstd' '-c' '-T0' '--auto-threads=logical' '--long' '-19')

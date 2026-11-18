@@ -12,7 +12,7 @@ Custom Arch Linux live ISOs, built by GitHub Actions from archiso's `releng` pro
 Both presets share:
 
 - UEFI boot only (systemd-boot), with extra boot entries that give the live session 50% of RAM as writable space, load the Nvidia driver early in boot (`modules_load=nvidia_drm`) before the login screen starts, or do both
-- EROFS root image with LZMA compression
+- EROFS root image with zstd (level 15) compression
 - zsh with starship, syntax highlighting and history substring search
 - kmscon on tty1, and on tty2-6 when you switch to them, with hardware-accelerated rendering, falling back to the normal getty if it fails
 - Nvidia's open kernel driver (`nvidia-open`) for GTX 16xx / RTX 20xx and newer. It blacklists nouveau, so older Nvidia GPUs get no accelerated driver, and nouveau's firmware (`linux-firmware-nvidia`) is left out of the otherwise complete `linux-firmware` set
