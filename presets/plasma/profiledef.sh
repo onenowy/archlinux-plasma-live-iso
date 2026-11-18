@@ -17,9 +17,13 @@ pacman_conf="pacman.conf"
 #   ~1.5% for ~6x the build time; LZMA levels above 6 gain nothing with 1 MiB
 #   pclusters, since the larger dictionaries never fit in one pcluster.
 # -C 1048576: 1MB Pcluster size
+# -E 48bit: 48-bit layout with byte-aligned ("encoded") extents, Linux 6.15+.
+#   Lets zstd compress each pcluster in one pass; without it, erofs-utils
+#   recompresses every pcluster several times to fill it exactly, which made
+#   zstd slower than LZMA. ztailpacking is not used for such extents.
 # -E ...: Enable ztailpacking, merge all fragments, inode-based deduplication
 airootfs_image_type="erofs"
-airootfs_image_tool_options=('-zzstd,level=15' '-C' '1048576' '-E' 'ztailpacking,all-fragments,fragdedupe=inode')
+airootfs_image_tool_options=('-zzstd,level=15' '-C' '1048576' '-E' '48bit,ztailpacking,all-fragments,fragdedupe=inode')
 
 # Bootstrap compression settings
 bootstrap_tarball_compression=('zstd' '-c' '-T0' '--auto-threads=logical' '--long' '-19')
