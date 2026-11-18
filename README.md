@@ -14,7 +14,7 @@ Both presets share:
 - UEFI boot only (systemd-boot), with an extra boot entry that gives the live session 50% of RAM as writable space
 - EROFS root image with LZMA compression
 - zsh with starship, syntax highlighting and history substring search
-- kmscon on tty1-6, falling back to the normal getty if it fails
+- kmscon on tty1, and on tty2-6 when you switch to them, falling back to the normal getty if it fails
 - NetworkManager (`nmtui` / `nmcli`) instead of systemd-networkd and iwd
 - firewalld with the `public` zone set to drop incoming traffic
 - No docs, man pages or non-English locales, to keep the image small

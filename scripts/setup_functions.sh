@@ -63,14 +63,14 @@ setup_kmscon() {
         printf '\nlogin=%s\n' "$login_cmd" >> "$AIROOTFS_DIR/etc/kmscon/kmscon.conf"
     fi
 
-    # Enable kmscon on tty1-6. kmsconvt@ conflicts with getty@ on the same VT
-    # and starts it as a fallback if kmscon fails.
+    # Same as `systemctl enable kmsconvt@.service`: kmscon on tty1 at boot, and on
+    # tty2-6 only when you switch to them (logind starts autovt@ttyN, aliased to
+    # kmsconvt@). kmsconvt@ conflicts with getty@ on the same VT and starts it as
+    # a fallback if kmscon fails.
+    # Don't pre-start tty2-6: kmscon 10.1.0 ignores SIGTERM on a VT that was never
+    # switched to, so shutdown waits 90s for each (github.com/kmscon/kmscon/issues/599).
     mkdir -p "$SYSTEMD_DIR/getty.target.wants"
-    for i in {1..6}; do
-        ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty${i}.service"
-    done
-
-    # Use kmscon for dynamically allocated VTs as well
+    ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/getty.target.wants/kmsconvt@tty1.service"
     ln -sf /usr/lib/systemd/system/kmsconvt@.service "$SYSTEMD_DIR/autovt@.service"
 
     # plasmalogin.service already ships Conflicts=/After=kmsconvt@tty1.service,
