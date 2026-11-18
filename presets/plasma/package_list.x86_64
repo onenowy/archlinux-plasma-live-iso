@@ -24,8 +24,21 @@ noto-fonts-emoji
 # --- [Hardware Support] ---
 intel-ucode
 amd-ucode
-linux-firmware
+# linux-firmware split up, without linux-firmware-nvidia (~100 MiB of nouveau and
+# Tegra firmware; nouveau is blacklisted by nvidia-utils, nvidia-open brings its own)
+linux-firmware-amd
+linux-firmware-amdgpu
+linux-firmware-atheros
+linux-firmware-broadcom
+linux-firmware-cirrus
+linux-firmware-intel
+linux-firmware-mediatek
+linux-firmware-other
+linux-firmware-radeon
+linux-firmware-realtek
+linux-firmware-ti
 sof-firmware
+nvidia-open    # Nvidia driver for GTX 16xx / RTX 20xx and newer (blacklists nouveau)
 
 # --- [Desktop Environment - Minimal] ---
 plasma-desktop

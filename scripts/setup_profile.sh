@@ -34,6 +34,10 @@ fi
 echo "-> Configuring pacman exclusions..."
 NO_EXTRACT_RULE="NoExtract  = usr/share/help/* usr/share/doc/* usr/share/man/* usr/share/locale/* usr/share/i18n/* !usr/share/locale/en*"
 sed -i "s|^#NoExtract.*|${NO_EXTRACT_RULE}|" /etc/pacman.conf
+# Preset-specific exclusions (one pattern per line) apply to the ISO only
+if [ -f "$PRESET_DIR/noextract.conf" ]; then
+    NO_EXTRACT_RULE="$NO_EXTRACT_RULE $(sed 's/#.*//' "$PRESET_DIR/noextract.conf" | xargs)"
+fi
 sed -i "s|^#NoExtract.*|${NO_EXTRACT_RULE}|" "$BUILD_DIR/pacman.conf"
 
 # Remove "with speech" boot entries

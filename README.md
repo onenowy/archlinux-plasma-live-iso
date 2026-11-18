@@ -6,7 +6,7 @@ Custom Arch Linux live ISOs, built by GitHub Actions from archiso's `releng` pro
 
 | Preset | What you get |
 | --- | --- |
-| `plasma` | Minimal KDE Plasma (Wayland) desktop. Autologin as user `arch` with passwordless sudo, Firefox and the basic KDE apps. |
+| `plasma` | Minimal KDE Plasma (Wayland) desktop. Autologin as user `arch` with passwordless sudo, Firefox and the basic KDE apps. CJK text uses Noto Sans CJK in Regular and Bold only. |
 | `console` | Console-only image. Root `zsh` on every VT through kmscon, no login prompt. |
 
 Both presets share:
@@ -14,7 +14,8 @@ Both presets share:
 - UEFI boot only (systemd-boot), with an extra boot entry that gives the live session 50% of RAM as writable space
 - EROFS root image with LZMA compression
 - zsh with starship, syntax highlighting and history substring search
-- kmscon on tty1, and on tty2-6 when you switch to them, falling back to the normal getty if it fails
+- kmscon on tty1, and on tty2-6 when you switch to them, with hardware-accelerated rendering, falling back to the normal getty if it fails
+- Nvidia's open kernel driver (`nvidia-open`) for GTX 16xx / RTX 20xx and newer. It blacklists nouveau, so older Nvidia GPUs get no accelerated driver, and nouveau's firmware (`linux-firmware-nvidia`) is left out of the otherwise complete `linux-firmware` set
 - NetworkManager (`nmtui` / `nmcli`) instead of systemd-networkd and iwd
 - firewalld with the `public` zone set to drop incoming traffic
 - No docs, man pages or non-English locales, to keep the image small
@@ -37,6 +38,7 @@ presets/<name>/
   package_list.x86_64    Packages to install (replaces the releng list)
   profiledef.sh          archiso profile definition
   setup.sh               Picks which setup functions run for this preset
+  noextract.conf         Optional: extra files pacman leaves out of the ISO
   ...                    Preset-specific config files
 scripts/
   setup_profile.sh       Copies releng and applies common/ and the preset
