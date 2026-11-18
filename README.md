@@ -11,7 +11,7 @@ Custom Arch Linux live ISOs, built by GitHub Actions from archiso's `releng` pro
 
 Both presets share:
 
-- UEFI boot only (systemd-boot), with an extra boot entry that gives the live session 50% of RAM as writable space
+- UEFI boot only (systemd-boot), with extra boot entries that give the live session 50% of RAM as writable space, load the Nvidia driver early in boot (`modules_load=nvidia_drm`) before the login screen starts, or do both
 - EROFS root image with LZMA compression
 - zsh with starship, syntax highlighting and history substring search
 - kmscon on tty1, and on tty2-6 when you switch to them, with hardware-accelerated rendering, falling back to the normal getty if it fails
@@ -30,7 +30,7 @@ The build runs in a privileged `archlinux:latest` container and is not meant to 
 
 ```
 common/                  Files used by every preset
-  efiboot/               Extra systemd-boot entry
+  efiboot/               Extra systemd-boot entries
   firewalld/             Zone overrides, copied to /etc/firewalld
   kmscon/                kmscon.conf
   zsh/, starship.toml    Shell configuration
