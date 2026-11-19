@@ -19,6 +19,7 @@ starship
 
 # --- [Fonts] ---
 ttf-firacode-nerd
+wqy-microhei    # CJK glyphs for kmscon; FiraCode has none
 
 # --- [Hardware Support] ---
 intel-ucode

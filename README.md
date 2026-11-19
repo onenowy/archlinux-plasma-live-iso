@@ -7,7 +7,7 @@ Custom Arch Linux live ISOs, built by GitHub Actions from archiso's `releng` pro
 | Preset | What you get |
 | --- | --- |
 | `plasma` | Minimal KDE Plasma (Wayland) desktop. Autologin as user `arch` with passwordless sudo, Firefox and the basic KDE apps. |
-| `console` | Console-only image. Root `zsh` on every VT through kmscon, no login prompt. |
+| `console` | Console-only image. Root `zsh` on every VT through kmscon, no login prompt. CJK text displays through `wqy-microhei`. |
 
 Both presets share:
 
