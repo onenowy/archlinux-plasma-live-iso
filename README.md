@@ -6,7 +6,7 @@ Custom Arch Linux live ISOs, built by GitHub Actions from archiso's `releng` pro
 
 | Preset | What you get |
 | --- | --- |
-| `plasma` | Minimal KDE Plasma (Wayland) desktop. Autologin as user `arch` with passwordless sudo, Firefox and the basic KDE apps. CJK text uses Noto Sans CJK in Regular and Bold only. |
+| `plasma` | Minimal KDE Plasma (Wayland) desktop. Autologin as user `arch` with passwordless sudo, Firefox and the basic KDE apps. |
 | `console` | Console-only image. Root `zsh` on every VT through kmscon, no login prompt. |
 
 Both presets share:
@@ -56,7 +56,6 @@ presets/<name>/
   package_list.x86_64    Packages to install (replaces the releng list)
   profiledef.sh          archiso profile definition
   setup.sh               Picks which setup functions run for this preset
-  noextract.conf         Optional: extra files pacman leaves out of the ISO
   ...                    Preset-specific config files
 scripts/
   setup_profile.sh       Copies releng and applies common/ and the preset
