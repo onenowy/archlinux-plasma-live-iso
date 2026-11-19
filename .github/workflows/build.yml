@@ -60,7 +60,8 @@ jobs:
       - name: Build ISO
         run: |
           mkdir -p $OUT_DIR
-          mkarchiso -v -w $WORK_DIR -o $OUT_DIR $BUILD_DIR
+          # -r: delete the work dir afterwards, leaving room to split a >2 GiB ISO
+          mkarchiso -v -r -w $WORK_DIR -o $OUT_DIR $BUILD_DIR
 
       - name: Create Release
         env:

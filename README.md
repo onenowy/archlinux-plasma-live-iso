@@ -22,9 +22,27 @@ Both presets share:
 
 ## Building
 
-Run the **Arch Live ISO** workflow from the Actions tab and pick a preset. The ISO is published as the release `iso-build-<preset>`, replacing the previous build of that preset.
+Run the **Arch Live ISO** workflow from the Actions tab and pick a preset. The ISO is published as the release `iso-build-<preset>`, replacing the previous build of that preset. An ISO of 2 GiB or more (GitHub's limit per file) is uploaded as `<iso>.part00`, `<iso>.part01`, … plus `<iso>.sha256`.
 
 The build runs in a privileged `archlinux:latest` container and is not meant to be run on a local machine: `scripts/setup_profile.sh` edits `/etc/pacman.conf` of the system it runs on.
+
+### Joining a split ISO
+
+Download all parts and the `.sha256` file into one folder, then:
+
+```bash
+# Linux
+cat <iso>.part* > <iso>
+sha256sum -c <iso>.sha256
+```
+
+```bat
+:: Windows (Command Prompt): /b is required, list the parts in order
+copy /b <iso>.part00+<iso>.part01 <iso>
+certutil -hashfile <iso> SHA256
+```
+
+The hash from `certutil` must match the one in `<iso>.sha256`.
 
 ## Layout
 
