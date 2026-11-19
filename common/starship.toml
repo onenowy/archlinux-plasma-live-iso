@@ -76,7 +76,7 @@ Pop = ""
 
 [sudo]
 disabled = false
-symbol = "# "
+symbol = "󱑷 "   # nf-md-wizard_hat (U+F1477), in FiraCode Nerd
 style = "bg:color_orange fg:color_fg0"
 format = '[$symbol]($style)'
 allow_windows=true
